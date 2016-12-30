@@ -6,6 +6,10 @@ Array.prototype.remove = function(obj){
 	return this;
 }
 
+function Blast(){
+
+}
+
 function getRandom(min, max) {
 	return Math.random() * (max - min) + min;
 }
@@ -75,27 +79,35 @@ function Player(game, options){
 	player.y = options.y || 0;
 	player.startX = player.x;
 	player.startY = player.y;
+	player.size = options.size || 30;
 	player.vx = 0;
 	player.vy = 0;
 	player.velocity = 25;
 	player.invulnerable = false;
-	player.graphic = options.sprite;
-	player.graphic.width = 30;
-	player.graphic.height = 30;
-	player.graphic.x = player.x;
-	player.graphic.y = player.y;
+	player.collisionRadius = player.size / 2;
 	player.keys = {
 		up: false,
 		down: false,
 		right: false,
 		left: false,
+	};
+
+	player.getGraphic = function(sprite){
+		var graphic = sprite;
+		graphic.width = player.size;
+		graphic.height = player.size;
+		graphic.anchor.x = 0.5;
+		graphic.anchor.y = 0.5;
+		graphic.x = player.x;
+		graphic.y = player.y;
+		game.engine.stage.addChild(graphic);
+		return graphic;
 	}
 
 	player.die = function(){
 		player.graphic.visible = false;
 		player.alive = false;
 		player.lives -= 1;
-		console.log('lives:', player.lives);
 		if (player.lives){
 			setTimeout(function(){
 				player.alive = true;
@@ -109,7 +121,40 @@ function Player(game, options){
 			}, 1000)
 		}
 	}
-
+	player.collide = function(){
+		if (player.alive && !player.invulnerable){
+			player.die();
+		}
+	}
+	player.emitBullet = function(){
+		if (!player.alive){
+			return false;	
+		}
+		Bullet(player.game, {
+		    color: 0x00FF00,
+			enemy: false,
+			x: player.x - 15,
+			y: player.y - 10,
+			vy: -25,
+			size: 1
+		});
+		Bullet(player.game, {
+		    color: 0x00FF00,
+			enemy: false,
+			x: player.x,
+			y: player.y - 15,
+			vy: -25,
+			size: 1
+		});
+		Bullet(player.game, {
+		    color: 0x00FF00,
+			enemy: false,
+			x: player.x + 15,
+			y: player.y - 10,
+			vy: -25,
+			size: 1
+		})
+	}
 	player.updateVelocity = function(){
 		var keys = player.keys;
 		var vx = 0;
@@ -132,8 +177,6 @@ function Player(game, options){
 		}
 		player.vx = vx * player.velocity;
 		player.vy = vy * player.velocity;
-
-		console.log('Velocity:', player.vx, player.vy, player.vx + player.vy);
 	}
 	player.logic = function(stateInfo){
 		player.x = player.x + player.vx * (stateInfo.elapsed / 100);
@@ -142,28 +185,29 @@ function Player(game, options){
 		player.graphic.y = player.y;
 	}
 
+	player.graphic = player.getGraphic(options.sprite);
 	player.game = game;
 
 	// Add sprite 
-	game.engine.stage.addChild(player.graphic);
 	return player
 }
 
 function Bullet(game, opts){
 	var bullet = {
-		enemy: opts.enemy || true,
+		enemy: opts.enemy,
 		x:opts.x,
 		y:opts.y,
 		size:opts.size,
 		vx: opts.vx || 0,
 		vy: opts.vy || 0,
 	};
+	bullet.collisionRadius = bullet.size / 2;
 
 	// Update game with self
 	game.bullets.push(bullet);
 
 	// Add graphic
-	bullet.graphic = game.engine.makeCircle(bullet.x, bullet.y, opts.size, 0xe74c3c);
+	bullet.graphic = game.engine.makeCircle(bullet.x, bullet.y, opts.size, opts.color);
 	game.engine.stage.addChild(bullet.graphic);
 
 	// Add references
@@ -194,6 +238,13 @@ function Enemy(game, opts){
 	enemy.vx = opts.vx;
 	enemy.vy = opts.vy;
 	enemy.game = game;
+	enemy.size = 30;
+	enemy.collisionRadius = enemy.size / 2;
+
+	enemy.collide = function(){
+		game.enemies.remove(enemy);
+		game.engine.stage.removeChild(enemy.graphic);
+	}
 
 	enemy.emitBullet = function(){
 		Bullet(enemy.game, {
@@ -202,13 +253,22 @@ function Enemy(game, opts){
 			vy: getRandom(0,20),
 			vx: getRandom(-5,5),
 			vy: 20,
+			enemy: true,
+			color: 0xe74c3c,
 			size: 2
 		})
 	}
-
-	enemy.graphic = game.engine.makeCircle(opts.x, opts.y, opts.size, 0x9b59b6);
-	game.engine.stage.addChild(enemy.graphic);
-
+	enemy.getGraphic = function(spriteSource){
+		var graphic = new PIXI.Sprite(PIXI.loader.resources[spriteSource].texture);
+		graphic.width = enemy.size;
+		graphic.height = enemy.size;
+		graphic.anchor.x = 0.5;
+		graphic.anchor.y = 0.5;
+		graphic.x = enemy.x;
+		graphic.y = enemy.y;
+		game.engine.stage.addChild(graphic);
+		return graphic;
+	}
 	enemy.logic = function(state){
 		if (!state.elapsed){
 			enemy.lastEmit = state.currentStateTime;
@@ -219,6 +279,10 @@ function Enemy(game, opts){
 			enemy.emitBullet();
 		}
 	}
+
+	enemy.graphic = enemy.getGraphic(opts.spriteSource);
+	game.engine.stage.addChild(enemy.graphic);
+
 	return enemy;
 }
 
@@ -229,6 +293,7 @@ function Enemy(game, opts){
 
 	game.spriteSources = {
 		player: 'img/ship.png',
+		enemy: 'img/enemy.png',
 	};
 
 	game.start = function(){
@@ -250,13 +315,13 @@ function Enemy(game, opts){
 			sprite: game.engine.sprites.player,
 		})
 		game.enemies = [
-			Enemy(game, {x: 100, y: 100, size: 10}),
-			Enemy(game, {x: 200, y: 100, size: 10}),
-			Enemy(game, {x: 300, y: 100, size: 10}),
-			Enemy(game, {x: 400, y: 100, size: 10}),
-			Enemy(game, {x: 500, y: 100, size: 10}),
-			Enemy(game, {x: 600, y: 100, size: 10}),
-			Enemy(game, {x: 700, y: 100, size: 10}),
+			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
 		]
 		game.bindKeys();
 		game.loop();
@@ -279,6 +344,7 @@ function Enemy(game, opts){
 		Mousetrap.bind('left', playerMoveKey('left', false), 'keyup');
 		Mousetrap.bind('right', playerMoveKey('right', true), 'keydown');
 		Mousetrap.bind('right', playerMoveKey('right', false), 'keyup');
+		Mousetrap.bind('space', game.player.emitBullet);
 		Mousetrap.bind('enter', function(){
 			game.lastStateUpdate = null;
 			game.play = !game.play;
@@ -315,11 +381,16 @@ function Enemy(game, opts){
 		for (var bullet of game.bullets){
 			bullet.logic(stateInfo);
 		}
-		if (!game.player.invulnerable && game.player.alive){
-			for (var bullet of game.bullets){
-				if (distance(bullet, game.player) < 10){
-					game.player.die();
-					break;
+		for (var bullet of game.bullets){
+			if (bullet.enemy){
+				if (distance(bullet, game.player) < game.player.collisionRadius + bullet.collisionRadius){
+					game.player.collide();
+				}
+			} else {
+				for (var enemy of game.enemies){
+					if (distance(bullet, enemy) < enemy.collisionRadius + bullet.collisionRadius){
+						enemy.collide();
+					}
 				}
 			}
 		}
