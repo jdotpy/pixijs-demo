@@ -85,6 +85,7 @@ function Player(game, options){
 	player.velocity = 25;
 	player.invulnerable = false;
 	player.collisionRadius = player.size / 2;
+	player.lastFire = (new Date()).getTime();
 	player.keys = {
 		up: false,
 		down: false,
@@ -179,10 +180,14 @@ function Player(game, options){
 		player.vy = vy * player.velocity;
 	}
 	player.logic = function(stateInfo){
-		player.x = player.x + player.vx * (stateInfo.elapsed / 100);
-		player.y = player.y + player.vy * (stateInfo.elapsed / 100);
-		player.graphic.x = player.x;
-		player.graphic.y = player.y;
+		// Move
+		player.game.move(player, stateInfo);
+
+		// Fire
+		if (player.keys.space && stateInfo.currentStateTime - player.lastFire > 500){
+			player.emitBullet();
+			player.lastFire = (new Date).getTime();
+		}
 	}
 
 	player.graphic = player.getGraphic(options.sprite);
@@ -215,10 +220,7 @@ function Bullet(game, opts){
 
 	// Functions
 	bullet.logic = function(stateInfo){
-		bullet.x = bullet.x + bullet.vx * (stateInfo.elapsed / 100);
-		bullet.y = bullet.y + bullet.vy * (stateInfo.elapsed / 100);
-		bullet.graphic.x = bullet.x;
-		bullet.graphic.y = bullet.y;
+		bullet.game.move(bullet, stateInfo);
 
 		if (game.isOutsideViewport(bullet.x, bullet.y, bullet.size)){
 			game.bullets.remove(bullet);
@@ -329,22 +331,25 @@ function Enemy(game, opts){
 	}
 
 	game.bindKeys = function(){
-		function playerMoveKey(key, on){
+		function playerKey(key, on){
 			return function(){
 				game.player.keys[key] = on;
-				game.player.updateVelocity()
+				if (key == 'up' || key == 'down' || key == 'right' || key == 'left'){
+					game.player.updateVelocity()
+				}
 			}
 		}
 		
-		Mousetrap.bind('up', playerMoveKey('up', true), 'keydown');
-		Mousetrap.bind('up', playerMoveKey('up', false), 'keyup');	
-		Mousetrap.bind('down', playerMoveKey('down', true), 'keydown');
-		Mousetrap.bind('down', playerMoveKey('down', false), 'keyup');
-		Mousetrap.bind('left', playerMoveKey('left', true), 'keydown');
-		Mousetrap.bind('left', playerMoveKey('left', false), 'keyup');
-		Mousetrap.bind('right', playerMoveKey('right', true), 'keydown');
-		Mousetrap.bind('right', playerMoveKey('right', false), 'keyup');
-		Mousetrap.bind('space', game.player.emitBullet);
+		Mousetrap.bind('up', playerKey('up', true), 'keydown');
+		Mousetrap.bind('up', playerKey('up', false), 'keyup');	
+		Mousetrap.bind('down', playerKey('down', true), 'keydown');
+		Mousetrap.bind('down', playerKey('down', false), 'keyup');
+		Mousetrap.bind('left', playerKey('left', true), 'keydown');
+		Mousetrap.bind('left', playerKey('left', false), 'keyup');
+		Mousetrap.bind('right', playerKey('right', true), 'keydown');
+		Mousetrap.bind('right', playerKey('right', false), 'keyup');
+		Mousetrap.bind('space', playerKey('space', true), 'keydown');
+		Mousetrap.bind('space', playerKey('space', false), 'keyup');
 		Mousetrap.bind('enter', function(){
 			game.lastStateUpdate = null;
 			game.play = !game.play;
@@ -366,6 +371,12 @@ function Enemy(game, opts){
 			return true;
 		}
 		return false;
+	}
+	game.move = function(obj, stateInfo){
+		obj.x = obj.x + obj.vx * (stateInfo.elapsed / 100);
+		obj.y = obj.y + obj.vy * (stateInfo.elapsed / 100);
+		obj.graphic.x = obj.x;
+		obj.graphic.y = obj.y;
 	}
 
 	game.updateState = function(){
