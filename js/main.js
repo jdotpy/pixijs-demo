@@ -221,10 +221,9 @@ function Bullet(game, opts){
 	// Functions
 	bullet.logic = function(stateInfo){
 		bullet.game.move(bullet, stateInfo);
-
 		if (game.isOutsideViewport(bullet.x, bullet.y, bullet.size)){
 			game.bullets.remove(bullet);
-			game.engine.stage.removeChild(bullet);
+			game.engine.stage.removeChild(bullet.graphic);
 			
 		}
 	}
@@ -368,6 +367,12 @@ LEVELS= [
 	}
 
 	game.nextLevel = function(){
+		// Reset locations
+		game.resetBullets();
+		game.player.x = game.player.startX;
+		game.player.y = game.player.startY;
+		
+		// Run the level constructor
 		game.level += 1;
 		if (game.level < LEVELS.length){
 			LEVELS[game.level](game);
@@ -439,6 +444,15 @@ LEVELS= [
 		obj.y = obj.y + obj.vy * (stateInfo.elapsed / 100);
 		obj.graphic.x = obj.x;
 		obj.graphic.y = obj.y;
+	}
+
+	game.resetBullets = function(){
+		for (var bullet of game.bullets){
+			console.log('Removing:', game.bullets)
+			bullet.graphic.visible = false;
+			game.engine.stage.removeChild(bullet.graphic);
+		}
+		game.bullets = [];
 	}
 
 	game.updateState = function(){
