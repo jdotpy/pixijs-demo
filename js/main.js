@@ -241,6 +241,8 @@ function Enemy(game, opts){
 	enemy.vy = opts.vy;
 	enemy.game = game;
 	enemy.size = 30;
+	enemy.cooldown = opts.cooldown || 500;
+	enemy.bulletSpeed = opts.bulletSpeed || 30;
 	enemy.collisionRadius = enemy.size / 2;
 
 	enemy.collide = function(){
@@ -254,7 +256,7 @@ function Enemy(game, opts){
 			y: enemy.y,
 			vy: getRandom(0,20),
 			vx: getRandom(-5,5),
-			vy: 20,
+			vy: enemy.bulletSpeed,
 			enemy: true,
 			color: 0xe74c3c,
 			size: 2
@@ -272,11 +274,7 @@ function Enemy(game, opts){
 		return graphic;
 	}
 	enemy.logic = function(state){
-		if (!state.elapsed){
-			enemy.lastEmit = state.currentStateTime;
-			enemy.emitBullet();
-		}
-		if (state.currentStateTime - enemy.lastEmit > 500){
+		if (!enemy.lastEmit ||state.currentStateTime - enemy.lastEmit > enemy.cooldown){
 			enemy.lastEmit = state.currentStateTime;
 			enemy.emitBullet();
 		}
@@ -287,6 +285,67 @@ function Enemy(game, opts){
 
 	return enemy;
 }
+
+LEVELS= [
+	function(game){
+		game.enemies = [
+			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+		]
+	},
+	function(game){
+		game.enemies = [
+			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+			Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
+		]
+	},
+	function(game){
+		game.enemies = [
+			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+		]
+	},
+	function(game){
+		game.enemies = [
+			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+			Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed:50, cooldown: 300}),
+		]
+	},
+];
 
 (function Game(options){
 	var game = {};
@@ -308,6 +367,16 @@ function Enemy(game, opts){
 		})
 	}
 
+	game.nextLevel = function(){
+		game.level += 1;
+		if (game.level < LEVELS.length){
+			LEVELS[game.level](game);
+		} else{
+			console.log('You win!');
+			game.play = false;
+		}
+	}
+
 	game.onEngineLoad = function(){
 		game.sprites = game.engine.sprites;
 		game.bullets = [];
@@ -316,15 +385,8 @@ function Enemy(game, opts){
 			y: game.height - 100,
 			sprite: game.engine.sprites.player,
 		})
-		game.enemies = [
-			Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-			Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-		]
+		game.level = -1;
+		game.nextLevel();
 		game.bindKeys();
 		game.loop();
 		game.play = true;
@@ -385,6 +447,7 @@ function Enemy(game, opts){
 		var elapsed = lastTime ? currentTime - lastTime : null;
 		var stateInfo = {lastStateTime: lastTime,currentStateTime: currentTime, elapsed: elapsed}
 
+		// Movement and player logic
 		game.player.logic(stateInfo);
 		for (var enemy of game.enemies){
 			enemy.logic(stateInfo);
@@ -404,6 +467,11 @@ function Enemy(game, opts){
 					}
 				}
 			}
+		}
+
+		// Conditionals
+		if (game.enemies.length == 0){
+			game.nextLevel();
 		}
 		game.lastStateUpdate = currentTime;
 	}
