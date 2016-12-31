@@ -6,10 +6,6 @@ Array.prototype.remove = function(obj){
   return this;
 }
 
-function Blast(){
-
-}
-
 function getRandom(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -45,6 +41,11 @@ function Engine(options){
   engine.setup = function (){
     engine.stage = new PIXI.Container(),
     engine.renderer = PIXI.autoDetectRenderer(options.width, options.height);
+    engine.renderer.view.style.position = "absolute";
+    engine.renderer.view.style.display = "block";
+    engine.renderer.autoResize = true;
+
+    engine.renderer.resize(options.width, options.height);
 
     // Add to Page
     document.getElementById(options.viewport).appendChild(engine.renderer.view);
@@ -115,8 +116,6 @@ function Player(game, options){
     player.graphic.visible = false;
     player.alive = false;
     player.lives -= 1;
-    player.gunLevel = 0;
-    player.applyGuns();
     if (player.lives){
       setTimeout(function(){
         player.alive = true;
@@ -135,8 +134,6 @@ function Player(game, options){
       player.die();
       Explosion(player.game, {x: player.x, y: player.y, size: 3 * player.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
     }
-  }
-  player.fire = function(){
   }
   player.updateVelocity = function(){
     var keys = player.keys;
@@ -169,7 +166,7 @@ function Player(game, options){
     player.game.move(player, stateInfo);
 
     // Fire
-    if (player.keys.space && stateInfo.currentStateTime - player.lastFire > player.guns.cooldown){
+    if (player.keys.space && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.guns.cooldown){
       
       player.guns.fire(player);
       player.lastFire = (new Date).getTime();
@@ -567,7 +564,6 @@ function makeRandomBooster(game, percentChance, x, y){
     boosterOpts['type'] = 'attack'; 
   }
   return Booster(game, boosterOpts);
-
 }
 
 function Enemy(game, opts){
@@ -640,6 +636,7 @@ function Enemy(game, opts){
   }
 
   enemy.graphic = enemy.getGraphic(opts.spriteSource);
+  game.enemies.push(enemy);
   return enemy;
 }
 
@@ -679,112 +676,105 @@ function Explosion(game, opts){
   return explosion;
 }
 
+TEST_LEVEL = function(game){
+  Enemy(game, {x: 100, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
+  Booster(game, {type: 'shield', x:game.width / 2, y:500, size: 30});
+  Booster(game, {type: 'shield', x:game.width / 2, y:400, size: 30});
+  Booster(game, {type: 'attack', x:game.width / 2, y:300, size: 30});
+  Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
+}
 LEVELS = [
+  TEST_LEVEL,
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000}),
-      Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000}),
-      Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000}),
-    ]
+    Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-    ]
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-      Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
+    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
   },
   function(game){
-    game.enemies = [
-      Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-      Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'}),
-    ]
+    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
+    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
   },
 ];
 
-(function Game(options){
+function Game(options){
   var game = {};
-  game.width = 900;
+  game.height = window.innerHeight - 100;
+  game.width = window.innerWidth;
   game.height = 700;
 
   game.spriteSources = {
@@ -852,6 +842,7 @@ LEVELS = [
       }
     }
     
+    // Movement - Arrows
     Mousetrap.bind('up', playerKey('up', true), 'keydown');
     Mousetrap.bind('up', playerKey('up', false), 'keyup');  
     Mousetrap.bind('down', playerKey('down', true), 'keydown');
@@ -860,6 +851,17 @@ LEVELS = [
     Mousetrap.bind('left', playerKey('left', false), 'keyup');
     Mousetrap.bind('right', playerKey('right', true), 'keydown');
     Mousetrap.bind('right', playerKey('right', false), 'keyup');
+    // Movement - WASD
+    Mousetrap.bind('w', playerKey('up', true), 'keydown');
+    Mousetrap.bind('w', playerKey('up', false), 'keyup');  
+    Mousetrap.bind('s', playerKey('down', true), 'keydown');
+    Mousetrap.bind('s', playerKey('down', false), 'keyup');
+    Mousetrap.bind('a', playerKey('left', true), 'keydown');
+    Mousetrap.bind('a', playerKey('left', false), 'keyup');
+    Mousetrap.bind('d', playerKey('right', true), 'keydown');
+    Mousetrap.bind('d', playerKey('right', false), 'keyup');
+
+    // Actions
     Mousetrap.bind('space', playerKey('space', true), 'keydown');
     Mousetrap.bind('space', playerKey('space', false), 'keyup');
     Mousetrap.bind('enter', function(){
@@ -889,6 +891,7 @@ LEVELS = [
     }
     return false;
   }
+  
   game.move = function(obj, stateInfo){
     obj.x = obj.x + obj.vx * (stateInfo.elapsed / 100);
     obj.y = obj.y + obj.vy * (stateInfo.elapsed / 100);
@@ -955,6 +958,5 @@ LEVELS = [
     }
     game.lastStateUpdate = currentTime;
   }
-
-  game.start();
-})();
+  return game;
+}

@@ -1,12 +1,59 @@
 <!doctype html>
 <meta charset="utf-8">
-	<title>Rogue 1.5</title>
-	<link rel="stylesheet" href="styles/main.css" type="text/css" />
+<title>Fire away!</title>
+<link rel="stylesheet" href="styles/bootstrap.min.css" />
+<link rel="stylesheet" href="styles/main.css" type="text/css" />
+<html>
 <body>
+	<div id="instructionOverlay" class="overlay">
+		<div id="instructions">
+			<h4>Your Mission</h4>
+			<ul id="mission">
+				<li>Dodge the red bullets</li>
+				<li>Run over the green power-ups</li>
+				<li>Shoot back</li>
+			</ul>
+
+			<br>
+			<h4>Controls</h4>
+			<ul id="controlList">
+				<li>Arrow keys: Move (or WASD)</li>
+				<li>Space: Fire (You can hold it down)</li>
+				<li>Shift: Hold down to activate shield</li>
+				<li>Enter: Pause</li>
+			</ul>
+		
+			<br>
+			<h4>Legend</h4>
+			<p><img src="img/booster-attack.png" class="powerUp" />Power up your weapon</p>
+			<p><img src="img/booster-shield.png" class="powerUp" />Add to your shield</p>
+			<p><img src="img/_replace/booster-extra-life.png" class="powerUp" />Extra life</p>
+
+			<br>
+			<div class="center">
+				<button onclick="document.startGame()" id="start" class="btn btn-default">Start the Game</button>
+			</div>
+		</div>
+	</div>
+	
+	<div id="HUD">
+	<span class="lives">0</span> Lives
+	</div>
 	<div id="viewport">
 	</div>
 
 	<script src="js/pixi.min.js"></script>
 	<script src="js/mousetrap.min.js"></script>
 	<script src="js/main.js"></script>
+	<script>
+		document.startGame = function(){
+			document.game = Game();
+			document.game.start();
+			document.getElementById('start').blur();
+			var overlay = document.getElementById('instructionOverlay')
+			overlay.parentNode.removeChild(overlay);
+		}
+	
+	</script>
 </body>
+</html>

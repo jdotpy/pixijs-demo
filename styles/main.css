@@ -1,5 +1,54 @@
+* {
+	margin: 0px;
+	padding: 0px;
+	border: 0px;
+}
+
+html {
+	width: 100%;
+}
 body {
+	background-color: #333;
+	width: 100%;
+}
+
+.overlay {
+	position: absolute;
 	width: 100%;
 	height: 100%;
 	background-color: #333;
+	opacity:0.9:
+}
+
+#instructionOverlay {
+	
+}
+#instructions {
+	border-radius: 1em;
+	background-color: black;
+	color: #888;
+	margin: 0 auto;
+	margin-top: 5em;
+	width: 40%;
+	padding: 2em;
+}
+
+.center {
+	text-align: center;
+}
+
+#controlList, #mission {
+	margin-left: 2em;
+}
+
+.powerUp {
+	margin-right: 1em;
+	width: 30px;
+}
+#HUD {
+	background-color: black;
+	height: 100px;
+	width: 100%;
+	border-bottom: solid 2px blue;
+	color: #ddd;
 }
