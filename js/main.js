@@ -68,8 +68,95 @@ function Engine(options){
     return graphic;
   }
 
+  engine.startArc = function(graphic, x, y, radius, start){
+    graphic.moveTo(
+      Math.cos(start) * radius,
+      Math.sin(start) * radius
+    )
+  }
+
+
   engine.setup();
   return engine;
+}
+
+function PlayerShield(game, player, options){
+  var shield = {
+    game: game,
+    player: player,
+    life: 0,
+    active: false,
+    size: options.size || 50,
+    color: 0x0000EE,
+    graphic: new PIXI.Graphics(),
+    arcAngle: 0,
+    lastLifeCheck: null,
+  };
+
+  shield.activate = function(){
+    if (shield.life){
+      shield.active = true;
+      shield.lastLifeCheck = (new Date()).getTime();
+    }
+  }
+  shield.deactivate = function(){
+    shield.active = false;
+    if (shield.lastLifeCheck){
+      var elapsed = (new Date()).getTime() - shield.lastLifeCheck;
+      shield.life =  Math.max(0, shield.life - elapsed);
+      shield.lastLifeCheck = null;
+    }
+  }
+  shield.logic = function(stateInfo){
+    shield.arcAngle = (shield.arcAngle + (stateInfo.elapsed / 120)) % (2 * Math.PI);
+    if (shield.active){
+      var elapsed = stateInfo.currentStateTime - shield.lastLifeCheck;
+      shield.life = Math.max(0, shield.life - elapsed);
+      shield.lastLifeCheck = (new Date()).getTime();
+      if (shield.life == 0){
+        shield.active = false;
+        shield.lastLifeCheck = null;
+      }
+    }
+    if (!shield.player.alive){
+      shield.graphic.visible = false;
+      return false;
+    }
+
+    // Draw
+    if (shield.active){
+      shield.graphic.clear();
+      shield.game.engine.startArc(shield.graphic, 0, 0, shield.size / 2, 0);
+      shield.graphic.lineStyle(2, shield.color, 1);
+      shield.graphic.arc(0, 0, shield.size / 2, 0, 2 * Math.PI);
+
+      shield.graphic.x = shield.player.x
+      shield.graphic.y = shield.player.y
+      shield.graphic.visible = true;
+
+    } else if (shield.life){
+      var endAngle = (shield.arcAngle + 1) % (2 * Math.PI);
+
+      shield.graphic.clear();
+      shield.game.engine.startArc(shield.graphic, 0, 0, shield.size / 2, shield.arcAngle);
+      shield.graphic.lineStyle(2, shield.color, 1);
+      shield.graphic.arc(0, 0, shield.size / 2, shield.arcAngle, endAngle);
+
+      shield.graphic.x = shield.player.x
+      shield.graphic.y = shield.player.y
+      shield.graphic.visible = true;
+    } else {
+      shield.graphic.visible = false;
+    }
+  }
+
+  shield.collide = function(bullet){
+    // Bullet hit the shield
+    Explosion(player.game, {x: bullet.x, y: bullet.y, size: 20, life: 300, spriteSource: 'img/_replace/explosion.png'});
+    bullet.remove();
+  }
+  game.engine.stage.addChild(shield.graphic);
+  return shield;
 }
 
 function Player(game, options){
@@ -85,15 +172,16 @@ function Player(game, options){
   player.vy = 0;
   player.velocity = 25;
   player.invulnerable = false;
-  player.shieldLife = 0;
   player.collisionRadius = player.size / 2;
   player.weaponLevel = 0;
   player.lastFire = (new Date()).getTime();
+  player.shield = PlayerShield(game, player, {size: 50});
   player.keys = {
     up: false,
     down: false,
     right: false,
     left: false,
+    fire: false,
   };
 
   player.getGraphic = function(sprite){
@@ -131,11 +219,21 @@ function Player(game, options){
       }, 1000)
     }
   }
-  player.collide = function(){
+  player.collide = function(bullet){
     if (player.alive && !player.invulnerable){
+      if (player.shield.active){
+        player.shield.collide(bullet);
+        return false
+      }
+      bullet.remove();
       player.die();
       Explosion(player.game, {x: player.x, y: player.y, size: 3 * player.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
     }
+  }
+  player.updateFromUser = function(key){
+     if (key == 'up' || key == 'down' || key == 'right' || key == 'left'){
+       player.updateVelocity();
+     }
   }
   player.updateVelocity = function(){
     var keys = player.keys;
@@ -161,18 +259,18 @@ function Player(game, options){
     player.vy = vy * player.velocity;
   }
   player.logic = function(stateInfo){
-    if (!player.alive){
-      return false;  
-    }
-    // Move
-    player.game.move(player, stateInfo);
+    if (player.alive){
+      // Move
+      player.game.move(player, stateInfo);
 
-    // Fire
-    if (player.keys.space && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
-      
-      player.weapon.fire(player);
-      player.lastFire = (new Date).getTime();
+      // Fire
+      if (player.keys.fire && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
+        
+        player.weapon.fire(player);
+        player.lastFire = (new Date).getTime();
+      }
     }
+    player.shield.logic(stateInfo);
   }
 
   player.graphic = player.getGraphic(options.sprite);
@@ -204,13 +302,17 @@ function Bullet(game, opts){
   // Add references
   bullet.game = game;
 
+
+  bullet.remove = function(){
+    game.removeBullets.push(bullet);
+    game.engine.stage.removeChild(bullet.graphic);
+  }
+
   // Functions
   bullet.logic = function(stateInfo){
     bullet.game.move(bullet, stateInfo);
     if (game.isOutsideViewport(bullet.x, bullet.y, bullet.size)){
-      game.bullets.remove(bullet);
-      game.engine.stage.removeChild(bullet.graphic);
-      
+      bullet.remove();
     }
   }
   return bullet;
@@ -519,7 +621,7 @@ function Booster(game, opts){
       player.lives += 1;
     }
     else if (booster.type == 'shield'){
-      player.shieldLife += 1000;
+      player.shield.life += 1000;
     }
     booster.remove();
   }
@@ -586,11 +688,12 @@ function Enemy(game, opts){
     makeRandomBooster(game, 40, enemy.x, enemy.y);
   }
 
-  enemy.collide = function(){
+  enemy.collide = function(bullet){
     enemy.health -= 1;
     if (enemy.health <= 0){
       enemy.die();
     }
+    bullet.remove();
   }
 
   enemy.emitBullet = function(){
@@ -813,6 +916,7 @@ function Game(options){
   game.onEngineLoad = function(){
     game.sprites = game.engine.sprites;
     game.bullets = [];
+    game.removeBullets = [];
     game.animations = [];
     game.boosters = [];
     game.enemies = [];
@@ -832,9 +936,7 @@ function Game(options){
     function playerKey(key, on){
       return function(){
         game.player.keys[key] = on;
-        if (key == 'up' || key == 'down' || key == 'right' || key == 'left'){
-          game.player.updateVelocity()
-        }
+        game.player.updateFromUser(key);
       }
     }
     
@@ -858,16 +960,27 @@ function Game(options){
     Mousetrap.bind('d', playerKey('right', false), 'keyup');
 
     // Actions
-    Mousetrap.bind('space', playerKey('space', true), 'keydown');
-    Mousetrap.bind('space', playerKey('space', false), 'keyup');
+    Mousetrap.bind('space', playerKey('fire', true), 'keydown');
+    Mousetrap.bind('space', playerKey('fire', false), 'keyup');
+    Mousetrap.bind('q', game.player.shield.activate, 'keydown');
+    Mousetrap.bind('q', game.player.shield.deactivate, 'keyup');
+
+    // System
     Mousetrap.bind('enter', function(){
       game.lastStateUpdate = null;
       game.play = !game.play;
     });
+
+    // Cheat
     Mousetrap.bind('7 7 7', function() {
-      console.log('Cheat mode');
-      game.player.weaponLevel = 777;
+      game.player.weaponLevel = 776;
       game.player.applyWeapon();
+    });
+    Mousetrap.bind('6 6 6', function() {
+      game.player.shield.life += 10000;
+    });
+    Mousetrap.bind('5 5 5', function() {
+      game.player.lives += 100;
     });
   }
 
@@ -920,16 +1033,22 @@ function Game(options){
       // Collision
       if (bullet.enemy){
         if (distance(bullet, game.player) < game.player.collisionRadius + bullet.collisionRadius){
-          game.player.collide();
+          game.player.collide(bullet);
         }
       } else {
         for (var enemy of game.enemies){
           if (distance(bullet, enemy) < enemy.collisionRadius + bullet.collisionRadius){
-            enemy.collide();
+            enemy.collide(bullet);
           }
         }
       }
     }
+    // Remove used bullets
+    for (var bullet of game.removeBullets){
+      game.bullets.remove(bullet);
+    }
+    game.removeBullets = [];
+
     for (var booster of game.boosters){
       // Movement
       booster.logic(stateInfo);

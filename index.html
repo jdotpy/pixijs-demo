@@ -19,7 +19,7 @@
 			<ul id="controlList">
 				<li>Arrow keys: Move (or WASD)</li>
 				<li>Space: Fire (You can hold it down)</li>
-				<li>Shift: Hold down to activate shield</li>
+				<li>Q: Hold down to activate shield</li>
 				<li>Enter: Pause</li>
 			</ul>
 		
@@ -55,6 +55,13 @@
 			x <span id="weaponLevel" class="stat">1</span>
 			</div>
 		</div>
+		<div class="statBox">
+			<img src="img/booster-shield.png" class="hudIcon">
+			<div class="hudLabel">
+			x <span id="shieldPower" class="stat">1</span>
+			</div>
+		</div>
+	</div>
 	</div>
 	
 	<div id="viewport">
@@ -76,12 +83,14 @@
 				lives: document.getElementById('lives'),
 				level: document.getElementById('level'),
 				weaponLevel: document.getElementById('weaponLevel'),
+				shieldPower: document.getElementById('shieldPower'),
 			}
 
 			function updateHUD(){
 				hud.lives.innerText = document.game.player.lives;
 				hud.level.innerText = (document.game.level || 0) + 1;
 				hud.weaponLevel.innerText = document.game.player.weaponLevel + 1;
+				hud.shieldPower.innerText = Math.ceil(document.game.player.shield.life / 1000);
 			}
 			setInterval(updateHUD, 500);
 		}
