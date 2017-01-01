@@ -25,9 +25,9 @@
 		
 			<br>
 			<h4>Legend</h4>
-			<p><img src="img/booster-attack.png" class="powerUp" />Power up your weapon</p>
-			<p><img src="img/booster-shield.png" class="powerUp" />Add to your shield</p>
-			<p><img src="img/_replace/booster-extra-life.png" class="powerUp" />Extra life</p>
+			<p><img src="img/booster-attack.png" class="gameIcon" />Power up your weapon</p>
+			<p><img src="img/booster-shield.png" class="gameIcon" />Add to your shield</p>
+			<p><img src="img/_replace/booster-extra-life.png" class="gameIcon" />Extra life</p>
 
 			<br>
 			<div class="center">
@@ -35,10 +35,28 @@
 			</div>
 		</div>
 	</div>
-	
+
 	<div id="HUD">
-	<span class="lives">0</span> Lives
+		<div class="statBox">
+			<div class="hudLabel">
+				<span class="stat">Level:&nbsp;</span>
+				<span id="level" class="stat">1</span>
+			</div>
+		</div>
+		<div class="statBox">
+			<img src="img/_replace/ship.png" class="hudIcon">
+			<div class="hudLabel">
+			x <span id="lives" class="stat">2</span>
+			</div>
+		</div>
+		<div class="statBox">
+			<img src="img/booster-attack.png" class="hudIcon">
+			<div class="hudLabel">
+			x <span id="weaponLevel" class="stat">1</span>
+			</div>
+		</div>
 	</div>
+	
 	<div id="viewport">
 	</div>
 
@@ -46,12 +64,26 @@
 	<script src="js/mousetrap.min.js"></script>
 	<script src="js/main.js"></script>
 	<script>
+
 		document.startGame = function(){
 			document.game = Game();
 			document.game.start();
 			document.getElementById('start').blur();
 			var overlay = document.getElementById('instructionOverlay')
 			overlay.parentNode.removeChild(overlay);
+
+			var hud = {
+				lives: document.getElementById('lives'),
+				level: document.getElementById('level'),
+				weaponLevel: document.getElementById('weaponLevel'),
+			}
+
+			function updateHUD(){
+				hud.lives.innerText = document.game.player.lives;
+				hud.level.innerText = (document.game.level || 0) + 1;
+				hud.weaponLevel.innerText = document.game.player.gunLevel;
+			}
+			setInterval(updateHUD, 500);
 		}
 	
 	</script>

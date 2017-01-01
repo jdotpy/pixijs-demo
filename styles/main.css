@@ -41,14 +41,33 @@ body {
 	margin-left: 2em;
 }
 
-.powerUp {
+.gameIcon {
 	margin-right: 1em;
 	width: 30px;
 }
+.hudIcon {
+	float: left;
+	width: 40px;
+	margin-right: .5em;
+}
+.hudLabel {
+	float: left;
+}
 #HUD {
 	background-color: black;
-	height: 100px;
+	height: 70px;
 	width: 100%;
-	border-bottom: solid 2px blue;
+	border-bottom: solid 2px grey;
 	color: #ddd;
+	padding: 1em;
+}
+
+.stat {
+	font-size: 2em;
+	font-weight: bold;
+}
+
+.statBox {
+	margin-left: 2em;
+	float: left;
 }
