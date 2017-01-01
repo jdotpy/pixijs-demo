@@ -172,7 +172,6 @@ function Player(game, options){
   player.vy = 0;
   player.velocity = 25;
   player.invulnerable = false;
-  player.collisionRadius = player.size / 2;
   player.weaponLevel = 0;
   player.lastFire = (new Date()).getTime();
   player.shield = PlayerShield(game, player, {size: 50});
@@ -194,6 +193,14 @@ function Player(game, options){
     graphic.y = player.y;
     game.engine.stage.addChild(graphic);
     return graphic;
+  }
+
+  player.collisionRadius = function(){
+    if (player.shield.active){
+      return player.shield.size / 2;
+    } else {
+      return player.size / 2;
+    }
   }
 
   player.applyWeapon = function(){
@@ -1032,7 +1039,7 @@ function Game(options){
       bullet.logic(stateInfo);
       // Collision
       if (bullet.enemy){
-        if (distance(bullet, game.player) < game.player.collisionRadius + bullet.collisionRadius){
+        if (distance(bullet, game.player) < game.player.collisionRadius() + bullet.collisionRadius){
           game.player.collide(bullet);
         }
       } else {
@@ -1054,7 +1061,7 @@ function Game(options){
       booster.logic(stateInfo);
 
       // Collision
-      if (distance(booster, game.player) < game.player.collisionRadius + booster.collisionRadius){
+      if (distance(booster, game.player) < game.player.collisionRadius() + booster.collisionRadius){
         booster.boost(game.player);
       }
     }
