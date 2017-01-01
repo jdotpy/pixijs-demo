@@ -87,7 +87,7 @@ function Player(game, options){
   player.invulnerable = false;
   player.shieldLife = 0;
   player.collisionRadius = player.size / 2;
-  player.gunLevel = 0;
+  player.weaponLevel = 0;
   player.lastFire = (new Date()).getTime();
   player.keys = {
     up: false,
@@ -108,8 +108,10 @@ function Player(game, options){
     return graphic;
   }
 
-  player.applyGuns = function(){
-    player.guns = PLAYER_GUNS[player.gunLevel];
+  player.applyWeapon = function(){
+    var weaponType = Math.min(player.weaponLevel, PLAYER_WEAPONS.length - 1)
+    player.weapon = PLAYER_WEAPONS[weaponType];
+    player.weapon.damage = player.weaponLevel;
   }
 
   player.die = function(){
@@ -166,16 +168,16 @@ function Player(game, options){
     player.game.move(player, stateInfo);
 
     // Fire
-    if (player.keys.space && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.guns.cooldown){
+    if (player.keys.space && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
       
-      player.guns.fire(player);
+      player.weapon.fire(player);
       player.lastFire = (new Date).getTime();
     }
   }
 
   player.graphic = player.getGraphic(options.sprite);
   player.game = game;
-  player.applyGuns();
+  player.applyWeapon();
 
   // Add sprite 
   return player
@@ -214,7 +216,7 @@ function Bullet(game, opts){
   return bullet;
 }
 
-PLAYER_GUNS = [
+PLAYER_WEAPONS = [
   {
     cooldown: 500,
     fire: function(player){
@@ -511,15 +513,10 @@ function Booster(game, opts){
   }
   booster.boost = function(player){
     if (booster.type == 'attack'){
-      if (player.gunLevel < PLAYER_GUNS.length - 1){
-        player.gunLevel +=1;
-        player.applyGuns();
-      }
-    }
-    else if (booster.type == 'life'){
-      if (player.gunLevel < PLAYER_GUNS.length){
-        player.lives += 1;
-      }
+      player.weaponLevel +=1;
+      player.applyWeapon();
+    } else if (booster.type == 'life'){
+      player.lives += 1;
     }
     else if (booster.type == 'shield'){
       player.shieldLife += 1000;
@@ -684,7 +681,7 @@ TEST_LEVEL = function(game){
   Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
 }
 LEVELS = [
-  TEST_LEVEL,
+  //TEST_LEVEL,
   function(game){
     Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
     Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
@@ -775,7 +772,6 @@ function Game(options){
   var game = {};
   game.height = window.innerHeight - 100;
   game.width = window.innerWidth;
-  game.height = 700;
 
   game.spriteSources = {
     player: 'img/_replace/ship.png',
@@ -870,8 +866,8 @@ function Game(options){
     });
     Mousetrap.bind('7 7 7', function() {
       console.log('Cheat mode');
-      game.player.gunLevel = PLAYER_GUNS.length -1;
-      game.player.applyGuns();
+      game.player.weaponLevel = 777;
+      game.player.applyWeapon();
     });
   }
 

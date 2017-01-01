@@ -81,7 +81,7 @@
 			function updateHUD(){
 				hud.lives.innerText = document.game.player.lives;
 				hud.level.innerText = (document.game.level || 0) + 1;
-				hud.weaponLevel.innerText = document.game.player.gunLevel;
+				hud.weaponLevel.innerText = document.game.player.weaponLevel + 1;
 			}
 			setInterval(updateHUD, 500);
 		}
