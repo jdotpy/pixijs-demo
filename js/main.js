@@ -10,6 +10,16 @@ function getRandom(min, max) {
   return Math.random() * (max - min) + min;
 }
 
+function speedToVelocity(speed, angle){
+  if (speed == 0){
+    return {vx: 0, vy: 0};
+  }
+  return {
+    vx: Math.sin(angle) * speed,
+    vy: -1 * (Math.cos(angle) * speed),
+  }
+}
+
 function distance(from, to) {
   var dx = from.x - to.x;
     var dy = from.y - to.y;
@@ -203,10 +213,34 @@ function Player(game, options){
     }
   }
 
-  player.applyWeapon = function(){
-    var weaponType = Math.min(player.weaponLevel, PLAYER_WEAPONS.length - 1)
-    player.weapon = PLAYER_WEAPONS[weaponType];
-    player.weapon.damage = player.weaponLevel;
+  player.applyWeapon = function(level){
+    if (!level){
+      level = player.weaponLevel;
+    } else if (level == '+1'){
+      level = player.weaponLevel + 1;
+    }
+
+    player.weaponLevel = level;
+    var weapon = {
+      counter: 1,
+      fire: PLAYER_WEAPON.fire,
+      color: 0x00FF00,
+      enemy: false,
+      size: 2, 
+    }
+
+    if (level < 5){
+      weapon.pattern = PLAYER_WEAPON.patterns.singleShot;
+      weapon.cooldown = 1000;
+      weapon.speed = 10;
+      weapon.damage = 1;
+    } else {
+      weapon.pattern = PLAYER_WEAPON.patterns.elevenShot;
+      weapon.cooldown = 100;
+      weapon.speed = 10;
+      weapon.damage = 1;
+    }
+    player.weapon = weapon;
   }
 
   player.die = function(){
@@ -273,7 +307,7 @@ function Player(game, options){
       // Fire
       if (player.keys.fire && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
         
-        player.weapon.fire(player);
+        player.weapon.fire(player, player.weapon);
         player.lastFire = (new Date).getTime();
       }
     }
@@ -291,6 +325,7 @@ function Player(game, options){
 function Bullet(game, opts){
   var bullet = {
     enemy: opts.enemy,
+    damage: opts.damage || 1,
     x:opts.x,
     y:opts.y,
     size:opts.size,
@@ -325,269 +360,107 @@ function Bullet(game, opts){
   return bullet;
 }
 
-PLAYER_WEAPONS = [
-  {
-    cooldown: 500,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 1
-      });
-    },
-  },
-  {
-    cooldown: 250,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-    },
-  },
-  {
-    cooldown: 500,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x - 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x + 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      })
-    },
-  },
-  {
-    cooldown: 500,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x - 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x + 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: -10,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: 10,
-        size: 2
-      })
-    },
-  },
-  {
-    cooldown: 300,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x - 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x + 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: -10,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: 10,
-        size: 2
-      })
-    },
-  },
-  {
-    cooldown: 200,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x - 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x + 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: -10,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: 10,
-        size: 2
-      })
-    },
-  },
-  {
-    cooldown: 200,
-    fire: function(player){
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x - 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 15,
-        vy: -25,
-        size: 2
-      });
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x + 15,
-        y: player.y - 10,
-        vy: -25,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: -10,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: 10,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: -5,
-        size: 2
-      })
-      Bullet(player.game, {
-        color: 0x00FF00,
-        enemy: false,
-        x: player.x,
-        y: player.y - 10,
-        vy: -25,
-        vx: 5,
-        size: 2
-      })
-    },
-  },
-]
+PLAYER_WEAPON = {};
+PLAYER_WEAPON.position = {
+  primary: 1,
+  left: 2,
+  right: 3,
+}
+PLAYER_WEAPON.patterns = {
+  singleShot: [{position: PLAYER_WEAPON.position.primary}],
+  tripleShot: [
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+  ],
+  partialFiveShot: function(i){[
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+    {i: i, position: PLAYER_WEAPON.position.left, angle: -0.2},
+    {i: i, position: PLAYER_WEAPON.position.right, angle: 0.2},
+  ]},
+  fiveShot: [
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+    {position: PLAYER_WEAPON.position.left, angle: -0.2},
+    {position: PLAYER_WEAPON.position.right, angle: 0.2},
+  ],
+  sevenShot:[
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+    {position: PLAYER_WEAPON.position.left, angle: -0.2},
+    {position: PLAYER_WEAPON.position.right, angle: 0.2},
+    {position: PLAYER_WEAPON.position.left, angle: -0.4},
+    {position: PLAYER_WEAPON.position.right, angle: -0.4},
+  ],
+  nineShot: [
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+    {position: PLAYER_WEAPON.position.left, angle: -0.2},
+    {position: PLAYER_WEAPON.position.right, angle: 0.2},
+    {position: PLAYER_WEAPON.position.left, angle: -0.4},
+    {position: PLAYER_WEAPON.position.right, angle: 0.4},
+    {position: PLAYER_WEAPON.position.left, angle: -0.6},
+    {position: PLAYER_WEAPON.position.right, angle: 0.6},
+  ],
+  elevenShot: [
+    {position: PLAYER_WEAPON.position.primary},
+    {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.right},
+    {position: PLAYER_WEAPON.position.left, angle: -0.2},
+    {position: PLAYER_WEAPON.position.right, angle: 0.2},
+    {position: PLAYER_WEAPON.position.left, angle: -0.4},
+    {position: PLAYER_WEAPON.position.right, angle: 0.4},
+    {position: PLAYER_WEAPON.position.left, angle: -0.6},
+    {position: PLAYER_WEAPON.position.right, angle: 0.6},
+    {position: PLAYER_WEAPON.position.left, angle: -0.8},
+    {position: PLAYER_WEAPON.position.right, angle: 0.8},
+  ],
+}
+PLAYER_WEAPON.fire = function(player, weapon){
+  weapon.counter = (weapon.counter + 1) % 100;
+  for (var b of weapon.pattern){
+    // Allow for the skipping of bullets that only fire on certain iterations
+    if (b.i && !(weapon.counter % b.i == 0)){
+      console.log('skipping trigger')
+      continue;
+    }
+    var opts = {
+      color: weapon.color,
+      enemy: weapon.enemy,
+      damage: weapon.damage,
+      size: weapon.size, 
+    }
+    // Calucluate Angle
+    if (!b.angle){
+      opts.vy = weapon.speed * -1,
+      opts.vx = 0;
+    } else {
+      var velocity = speedToVelocity(weapon.speed, b.angle);
+      opts.vx = velocity.vx;
+      opts.vy = velocity.vy;
+    }
+
+    // Calculate position
+    if (b.position == PLAYER_WEAPON.position.left){
+      opts.x = player.x - 15;
+      opts.y = player.y - 10;
+    } else if (b.position == PLAYER_WEAPON.position.right){
+      opts.x =  player.x + 15;
+      opts.y =  player.y - 10;
+    } else {
+      // Primary
+      opts.x = player.x;
+      opts.y = player.y - 15;
+    }
+    console.log('Firing bullet with opts:', b, opts);
+    Bullet(player.game, opts);
+  }
+}
 
 function Booster(game, opts){
   // Props
@@ -622,8 +495,7 @@ function Booster(game, opts){
   }
   booster.boost = function(player){
     if (booster.type == 'attack'){
-      player.weaponLevel +=1;
-      player.applyWeapon();
+      player.applyWeapon('+1');
     } else if (booster.type == 'life'){
       player.lives += 1;
     }
@@ -691,14 +563,16 @@ function Enemy(game, opts){
   enemy.die = function(){
     game.enemies.remove(enemy);
     game.engine.stage.removeChild(enemy.graphic);
-    Explosion(enemy.game, {x: enemy.x, y: enemy.y, size: 3 * enemy.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
     makeRandomBooster(game, 40, enemy.x, enemy.y);
   }
 
   enemy.collide = function(bullet){
-    enemy.health -= 1;
+    enemy.health -= bullet.damage;
     if (enemy.health <= 0){
       enemy.die();
+      Explosion(enemy.game, {x: enemy.x, y: enemy.y, size: 3 * enemy.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
+    } else {
+      Explosion(enemy.game, {x: enemy.x, y: enemy.y, size: 30, life: 300, spriteSource: 'img/_replace/explosion.png'});
     }
     bullet.remove();
   }
@@ -784,14 +658,14 @@ function Explosion(game, opts){
 }
 
 TEST_LEVEL = function(game){
-  Enemy(game, {x: 100, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
+  Enemy(game, {health: 5, x: 100, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
   Booster(game, {type: 'shield', x:game.width / 2, y:500, size: 30});
   Booster(game, {type: 'shield', x:game.width / 2, y:400, size: 30});
   Booster(game, {type: 'attack', x:game.width / 2, y:300, size: 30});
   Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
 }
 LEVELS = [
-  //TEST_LEVEL,
+  TEST_LEVEL,
   function(game){
     Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
     Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
@@ -882,6 +756,8 @@ function Game(options){
   var game = {};
   game.height = window.innerHeight - 100;
   game.width = window.innerWidth;
+  game.onWin = options.onWin || function(){console.log('You win!')};
+  game.onLose = options.onLose || function(){console.log('You lose!')};
 
   game.spriteSources = {
     player: 'img/_replace/ship.png',
@@ -913,8 +789,8 @@ function Game(options){
       if (game.level < LEVELS.length){
         LEVELS[game.level](game);
       } else{
-        console.log('You win!');
         game.play = false;
+        game.end(false);
       }
       game.loading = false;
     }, 2000);
@@ -980,8 +856,7 @@ function Game(options){
 
     // Cheat
     Mousetrap.bind('7 7 7', function() {
-      game.player.weaponLevel = 776;
-      game.player.applyWeapon();
+      game.player.applyWeapon(776);
     });
     Mousetrap.bind('6 6 6', function() {
       game.player.shield.life += 10000;
@@ -1078,7 +953,18 @@ function Game(options){
       game.nextLevel();
       game.loading = true;
     }
+    if (!game.player.alive && !game.player.lives){
+      game.end(false);
+    }
     game.lastStateUpdate = currentTime;
+  }
+
+  game.end = function(won){
+    if (won){
+      game.onWin();
+    } else {
+      game.onLose();
+    }
   }
   return game;
 }

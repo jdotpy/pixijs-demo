@@ -71,9 +71,14 @@
 	<script src="js/mousetrap.min.js"></script>
 	<script src="js/main.js"></script>
 	<script>
+		document.onWin = function(){
 
+		}
+		document.onLose = function(){
+			
+		}
 		document.startGame = function(){
-			document.game = Game();
+			document.game = Game({});
 			document.game.start();
 			document.getElementById('start').blur();
 			var overlay = document.getElementById('instructionOverlay')
