@@ -665,11 +665,12 @@ TEST_LEVEL = function(game){
   Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
 }
 LEVELS = [
-  TEST_LEVEL,
+  //TEST_LEVEL,
   function(game){
-    Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
-    Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
-    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy1, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy2, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy3, bulletSpeed: 15, cooldown: 1000});
+    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy4, bulletSpeed: 15, cooldown: 1000});
   },
   function(game){
     Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
@@ -764,6 +765,10 @@ function Game(options){
     boosterAttack: 'img/booster-attack.png',
     boosterShield: 'img/booster-shield.png',
     boosterLife: 'img/_replace/booster-extra-life.png',
+    enemy1: 'img/_replace/enemy1.png',
+    enemy2: 'img/_replace/enemy2.png',
+    enemy3: 'img/_replace/enemy3.png',
+    enemy4: 'img/_replace/enemy4.png',
     enemy: 'img/_replace/enemy.png',
     explosion: 'img/_replace/explosion.png',
   };
@@ -856,13 +861,13 @@ function Game(options){
 
     // Cheat
     Mousetrap.bind('7 7 7', function() {
-      game.player.applyWeapon(776);
+      game.player.applyWeapon('+!');
     });
-    Mousetrap.bind('6 6 6', function() {
-      game.player.shield.life += 10000;
+    Mousetrap.bind('8 8 8', function() {
+      game.player.shield.life += 1;
     });
-    Mousetrap.bind('5 5 5', function() {
-      game.player.lives += 100;
+    Mousetrap.bind('9 9 9', function() {
+      game.player.lives += 1;
     });
   }
 
