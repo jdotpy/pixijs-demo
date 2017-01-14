@@ -162,7 +162,7 @@ function PlayerShield(game, player, options){
 
   shield.collide = function(bullet){
     // Bullet hit the shield
-    Explosion(player.game, {x: bullet.x, y: bullet.y, size: 20, life: 300, spriteSource: 'img/_replace/explosion.png'});
+    Explosion(player.game, {x: bullet.x, y: bullet.y, size: 20, life: 300});
     bullet.remove();
   }
   game.engine.stage.addChild(shield.graphic);
@@ -180,7 +180,7 @@ function Player(game, options){
   player.size = options.size || 30;
   player.vx = 0;
   player.vy = 0;
-  player.velocity = 25;
+  player.speed = 25;
   player.invulnerable = false;
   player.weaponLevel = 0;
   player.lastFire = (new Date()).getTime();
@@ -222,23 +222,56 @@ function Player(game, options){
 
     player.weaponLevel = level;
     var weapon = {
-      counter: 1,
-      fire: PLAYER_WEAPON.fire,
+      counter: 1, // Iteration counter for weapons that cycle
+      fire: PLAYER_WEAPON.fire, // Function that sends the blast
       color: 0x00FF00,
       enemy: false,
-      size: 2, 
+      size: 2,  // Size of bullet it produces
+      speed: 30, // Default speed 
+      damage: 5, // Default damage
+      cooldown: 500, // Default cooldown
     }
 
-    if (level < 5){
+    if (level < 3){
       weapon.pattern = PLAYER_WEAPON.patterns.singleShot;
       weapon.cooldown = 1000;
-      weapon.speed = 10;
+      weapon.speed = 20 + (2 * level); // 20 - 24
       weapon.damage = 1;
+    } else if (level < 5){
+      weapon.pattern = PLAYER_WEAPON.patterns.tripleShot;
+      weapon.cooldown = 900 - (level * 50); // 900 - 700 
+      weapon.speed = 25;
+      weapon.damage = 2;
+    } else if (level < 7){
+      weapon.pattern = PLAYER_WEAPON.patterns.partialFiveShot(4);
+      weapon.speed = 26
+      weapon.cooldown = 700 - ((level - 4) * 50); // 650 - 600
+      weapon.damage = 3;
+    } else if (level < 10){
+      weapon.pattern = PLAYER_WEAPON.patterns.partialFiveShot(2);
+      weapon.speed = 27;
+      weapon.cooldown = 600 - ((level - 6) * 50); // 550 - 500
+      weapon.damage = 4;
+    } else if (level < 20){
+      weapon.pattern = PLAYER_WEAPON.patterns.fiveShot;
+      weapon.speed = 28
+      weapon.cooldown = 500 - ((level - 9) * 10); // 500 - 400
+      weapon.damage = 5;
+    } else if (level < 30){
+      weapon.pattern = PLAYER_WEAPON.patterns.sevenShot;
+      weapon.speed = 29
+      weapon.cooldown = 500 - ((level - 19) * 10); // 400 - 300
+      weapon.damage = 6;
+    } else if (level < 40){
+      weapon.pattern = PLAYER_WEAPON.patterns.nineShot;
+      weapon.speed = 30;
+      weapon.cooldown = 300;
+      weapon.damage = 6 + (level / 5);
     } else {
       weapon.pattern = PLAYER_WEAPON.patterns.elevenShot;
-      weapon.cooldown = 100;
-      weapon.speed = 10;
-      weapon.damage = 1;
+      weapon.speed = 32;
+      weapon.cooldown = 200;
+      weapon.damage = 6 + (level / 5);
     }
     player.weapon = weapon;
   }
@@ -268,7 +301,7 @@ function Player(game, options){
       }
       bullet.remove();
       player.die();
-      Explosion(player.game, {x: player.x, y: player.y, size: 3 * player.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
+      Explosion(player.game, {x: player.x, y: player.y, size: 3 * player.size, life: 300});
     }
   }
   player.updateFromUser = function(key){
@@ -296,8 +329,8 @@ function Player(game, options){
       vx = Math.sqrt(.5) * vx;
       vy = Math.sqrt(.5) * vy;
     }
-    player.vx = vx * player.velocity;
-    player.vy = vy * player.velocity;
+    player.vx = vx * player.speed;
+    player.vy = vy * player.speed;
   }
   player.logic = function(stateInfo){
     if (player.alive){
@@ -377,7 +410,7 @@ PLAYER_WEAPON.patterns = {
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
   ],
-  partialFiveShot: function(i){[
+  partialFiveShot: function(i){return [
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
@@ -398,7 +431,7 @@ PLAYER_WEAPON.patterns = {
     {position: PLAYER_WEAPON.position.left, angle: -0.2},
     {position: PLAYER_WEAPON.position.right, angle: 0.2},
     {position: PLAYER_WEAPON.position.left, angle: -0.4},
-    {position: PLAYER_WEAPON.position.right, angle: -0.4},
+    {position: PLAYER_WEAPON.position.right, angle: 0.4},
   ],
   nineShot: [
     {position: PLAYER_WEAPON.position.primary},
@@ -660,7 +693,7 @@ function Explosion(game, opts){
     explosion.graphic.width = explosion.size;
     explosion.graphic.height = explosion.size;
   }
-  explosion.graphic = explosion.getGraphic(opts.spriteSource);
+  explosion.graphic = explosion.getGraphic('img/_replace/explosion.png');
   explosion.game.animations.push(explosion);
   return explosion;
 }
@@ -868,7 +901,7 @@ function Game(options){
 
     // Cheat
     Mousetrap.bind('7 7 7', function() {
-      game.player.applyWeapon('+!');
+      game.player.applyWeapon('+1');
     });
     Mousetrap.bind('8 8 8', function() {
       game.player.shield.life += 1;
