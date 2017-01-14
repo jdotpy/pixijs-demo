@@ -302,7 +302,7 @@ function Player(game, options){
   player.logic = function(stateInfo){
     if (player.alive){
       // Move
-      player.game.move(player, stateInfo);
+      player.game.move(player, stateInfo, true);
 
       // Fire
       if (player.keys.fire && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
@@ -332,7 +332,7 @@ function Bullet(game, opts){
     vx: opts.vx || 0,
     vy: opts.vy || 0,
   };
-  bullet.collisionRadius = bullet.size / 2;
+
 
   // Update game with self
   game.bullets.push(bullet);
@@ -351,6 +351,10 @@ function Bullet(game, opts){
   }
 
   // Functions
+  bullet.collisionRadius = function(){
+    return bullet.size / 2; 
+  }
+
   bullet.logic = function(stateInfo){
     bullet.game.move(bullet, stateInfo);
     if (game.isOutsideViewport(bullet.x, bullet.y, bullet.size)){
@@ -472,8 +476,6 @@ function Booster(game, opts){
     vx: opts.vx || 0,
     vy: opts.vy || 0,
   };
-  booster.collisionRadius = booster.size / 2;
-
   if (booster.type == 'life'){
     booster.spriteSource = game.spriteSources.boosterLife;
   } else if (booster.type == 'attack'){
@@ -483,6 +485,9 @@ function Booster(game, opts){
   }
 
   // Functions
+  booster.collisionRadius = function(){
+    return booster.size / 2;
+  }
   booster.logic = function(stateInfo){
     booster.game.move(booster, stateInfo);
     if (game.isOutsideViewport(booster.x, booster.y, booster.size)){
@@ -557,13 +562,16 @@ function Enemy(game, opts){
   enemy.size = 30;
   enemy.cooldown = opts.cooldown || 500;
   enemy.bulletSpeed = opts.bulletSpeed || 30;
-  enemy.collisionRadius = enemy.size / 2;
   enemy.bulletType = opts.bulletType || 'straight';
 
   enemy.die = function(){
     game.enemies.remove(enemy);
     game.engine.stage.removeChild(enemy.graphic);
     makeRandomBooster(game, 40, enemy.x, enemy.y);
+  }
+
+  enemy.collisionRadius = function(){
+    return enemy.size / 2;
   }
 
   enemy.collide = function(bullet){
@@ -794,8 +802,7 @@ function Game(options){
       if (game.level < LEVELS.length){
         LEVELS[game.level](game);
       } else{
-        game.play = false;
-        game.end(false);
+        game.end(true);
       }
       game.loading = false;
     }, 2000);
@@ -888,11 +895,24 @@ function Game(options){
     return false;
   }
   
-  game.move = function(obj, stateInfo){
-    obj.x = obj.x + obj.vx * (stateInfo.elapsed / 100);
-    obj.y = obj.y + obj.vy * (stateInfo.elapsed / 100);
-    obj.graphic.x = obj.x;
-    obj.graphic.y = obj.y;
+  game.move = function(obj, stateInfo, restrictToViewport){
+    restrictToViewport = restrictToViewport || false;
+    var x = obj.x + obj.vx * (stateInfo.elapsed / 100);
+    var y = obj.y + obj.vy * (stateInfo.elapsed / 100);
+
+    // Optionally restrict inside the bounding box of viewport
+    if (restrictToViewport){
+      var radius = obj.collisionRadius();
+      x = Math.max(x, radius);
+      y = Math.max(y, radius);
+      x = Math.min(x, game.width - radius);
+      y = Math.min(y, game.height - radius);
+    }
+    obj.x = x;
+    obj.y = y;
+    obj.graphic.x = x;
+    obj.graphic.y = y;
+
   }
 
   game.resetBullets = function(){
@@ -919,12 +939,12 @@ function Game(options){
       bullet.logic(stateInfo);
       // Collision
       if (bullet.enemy){
-        if (distance(bullet, game.player) < game.player.collisionRadius() + bullet.collisionRadius){
+        if (distance(bullet, game.player) < game.player.collisionRadius() + bullet.collisionRadius()){
           game.player.collide(bullet);
         }
       } else {
         for (var enemy of game.enemies){
-          if (distance(bullet, enemy) < enemy.collisionRadius + bullet.collisionRadius){
+          if (distance(bullet, enemy) < enemy.collisionRadius() + bullet.collisionRadius()){
             enemy.collide(bullet);
           }
         }
@@ -941,7 +961,7 @@ function Game(options){
       booster.logic(stateInfo);
 
       // Collision
-      if (distance(booster, game.player) < game.player.collisionRadius() + booster.collisionRadius){
+      if (distance(booster, game.player) < game.player.collisionRadius() + booster.collisionRadius()){
         booster.boost(game.player);
       }
     }
@@ -965,6 +985,7 @@ function Game(options){
   }
 
   game.end = function(won){
+    game.play = false;
     if (won){
       game.onWin();
     } else {

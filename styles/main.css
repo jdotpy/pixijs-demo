@@ -12,6 +12,11 @@ body {
 	width: 100%;
 }
 
+.hidden {
+	visibility: hidden;
+	display: none;
+}
+
 .overlay {
 	position: absolute;
 	width: 100%;

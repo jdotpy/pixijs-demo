@@ -35,7 +35,6 @@
 			</div>
 		</div>
 	</div>
-
 	<div id="HUD">
 		<div class="statBox">
 			<div class="hudLabel">
@@ -61,6 +60,12 @@
 			x <span id="shieldPower" class="stat">1</span>
 			</div>
 		</div>
+		<div class="statBox" id="youLose" style="display: none;">
+			<span class="stat">You Lose :(</span>
+		</div>
+		<div class="statBox" id="youWin" style="display: none;">
+			<span class="stat">You Win! :D</span>
+		</div>
 	</div>
 	</div>
 	
@@ -72,13 +77,18 @@
 	<script src="js/main.js"></script>
 	<script>
 		document.onWin = function(){
-
+			document.getElementById('youWin').style.display = 'block';
+			console.log('You win!');
 		}
 		document.onLose = function(){
-			
+			document.getElementById('youLose').style.display = 'block';
+			console.log('You lose!');
 		}
 		document.startGame = function(){
-			document.game = Game({});
+			document.game = Game({
+				onLose: document.onLose,
+				onWin: document.onWin,
+			});
 			document.game.start();
 			document.getElementById('start').blur();
 			var overlay = document.getElementById('instructionOverlay')
