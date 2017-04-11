@@ -10,6 +10,17 @@ function getRandom(min, max) {
   return Math.random() * (max - min) + min;
 }
 
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function randomChoice(list) {
+  var index = getRandomInt(0, list.length);
+  return list[index];
+}
+
 function speedToVelocity(speed, angle){
   if (speed == 0){
     return {vx: 0, vy: 0};
@@ -192,7 +203,6 @@ function Player(game, options){
     left: false,
     fire: false,
   };
-
   player.getGraphic = function(sprite){
     var graphic = sprite;
     graphic.width = player.size;
@@ -204,7 +214,13 @@ function Player(game, options){
     game.engine.stage.addChild(graphic);
     return graphic;
   }
-
+  player.speedBoost = function(multiplier, duration){
+    var originalSpeed = player.speed;
+    player.speed = player.speed * multiplier;
+    setTimeout(function(){
+      player.speed = originalSpeed;
+    }, duration);
+  }
   player.collisionRadius = function(){
     if (player.shield.active){
       return player.shield.size / 2;
@@ -212,7 +228,6 @@ function Player(game, options){
       return player.size / 2;
     }
   }
-
   player.applyWeapon = function(level){
     if (!level){
       level = player.weaponLevel;
@@ -275,7 +290,6 @@ function Player(game, options){
     }
     player.weapon = weapon;
   }
-
   player.die = function(){
     player.graphic.visible = false;
     player.alive = false;
@@ -463,7 +477,6 @@ PLAYER_WEAPON.fire = function(player, weapon){
   for (var b of weapon.pattern){
     // Allow for the skipping of bullets that only fire on certain iterations
     if (b.i && !(weapon.counter % b.i == 0)){
-      console.log('skipping trigger')
       continue;
     }
     var opts = {
@@ -494,7 +507,6 @@ PLAYER_WEAPON.fire = function(player, weapon){
       opts.x = player.x;
       opts.y = player.y - 15;
     }
-    console.log('Firing bullet with opts:', b, opts);
     Bullet(player.game, opts);
   }
 }
@@ -662,6 +674,30 @@ function Enemy(game, opts){
   return enemy;
 }
 
+ENEMIES = {
+  'basic': function(game, level, x, y) {
+    Enemy(game, {
+      x: x,
+      y: y,
+      size: 100,
+      spriteSource: game.spriteSources.enemy1,
+      bulletSpeed: 15,
+      cooldown: 1000
+    });
+  },
+  'randomizer': function(game, level, x, y) {
+    Enemy(game, {
+      x: x,
+      y: y,
+      size: 100,
+      spriteSource: game.spriteSources.enemy2,
+      bulletType: 'random',
+      bulletSpeed: 30,
+      cooldown: 1000
+    });
+  },
+}
+
 function Explosion(game, opts){
   var explosion = {
     game: game,
@@ -705,6 +741,7 @@ TEST_LEVEL = function(game){
   Booster(game, {type: 'attack', x:game.width / 2, y:300, size: 30});
   Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
 }
+
 LEVELS = [
   //TEST_LEVEL,
   function(game){
@@ -794,6 +831,8 @@ LEVELS = [
   },
 ];
 
+
+
 function Game(options){
   var game = {};
   game.height = window.innerHeight - 100;
@@ -810,7 +849,6 @@ function Game(options){
     enemy2: 'img/_replace/enemy2.png',
     enemy3: 'img/_replace/enemy3.png',
     enemy4: 'img/_replace/enemy4.png',
-    enemy: 'img/_replace/enemy.png',
     explosion: 'img/_replace/explosion.png',
   };
 
@@ -825,20 +863,22 @@ function Game(options){
   }
 
   game.nextLevel = function(){
+    var loadTime = 2000;
     // Reset locations
     game.loading = true;
     game.resetBullets();
+    game.player.speedBoost(2, loadTime);
     setTimeout(function(){
       
       // Run the level constructor
       game.level += 1;
       if (game.level < LEVELS.length){
-        LEVELS[game.level](game);
+        game.spawnEnemies();
       } else{
         game.end(true);
       }
       game.loading = false;
-    }, 2000);
+    }, loadTime);
   }
 
   game.onEngineLoad = function(){
@@ -909,6 +949,55 @@ function Game(options){
     Mousetrap.bind('9 9 9', function() {
       game.player.lives += 1;
     });
+  }
+
+  game.getEnemyPositions = function(rowCount, enemyDistance, viewportPadding) {
+    var halfWidth = game.width / 2;
+    var startY = viewportPadding;
+
+    var positions = [];
+    for ( var row=0; row<rowCount; row++ ) {
+      var y = startY + (row * enemyDistance);
+
+      if (row % 2 === 0) {
+        // enemy in middle
+        positions.push({x: halfWidth, y: y});
+        
+        var wingmenCount = Math.floor(halfWidth / enemyDistance);
+        for ( var i=1; i<=wingmenCount; i++ ) {
+          var distanceFromCenter = enemyDistance * i;
+          var leftWingmanX = halfWidth - distanceFromCenter;
+          var rightWingmanX =  halfWidth + distanceFromCenter;
+          positions.push({x: leftWingmanX, y: y});
+          positions.push({x: rightWingmanX, y: y});
+        }
+      } else {
+        // space in middle
+        var centerPadding = enemyDistance / 2;
+        var sideCount = Math.floor((halfWidth - centerPadding) / enemyDistance);
+        for ( var i=0; i<=sideCount; i++ ) {
+          var distanceFromCenter = enemyDistance * i;
+          var leftEnemyX = (halfWidth - centerPadding) - distanceFromCenter;
+          var rightEnemyX = (halfWidth + centerPadding) + distanceFromCenter;
+          positions.push({x: leftEnemyX, y: y});
+          positions.push({x: rightEnemyX, y: y});
+        }
+      }
+    }
+    return positions;
+  }
+
+  game.spawnEnemies = function() {
+    var rowCount = 2;
+    var enemyPadding = 200;
+    var viewportPadding = 50;
+    var positions = game.getEnemyPositions(rowCount, enemyPadding, viewportPadding);
+    var enemies = [ENEMIES.basic, ENEMIES.randomizer]; 
+
+    for (var position of positions) {
+      var enemyType = randomChoice(enemies);
+      var enemy = enemyType(game, game.level, position.x, position.y);
+    }
   }
 
   game.loop = function (){
