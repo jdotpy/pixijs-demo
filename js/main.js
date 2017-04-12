@@ -6,6 +6,11 @@ Array.prototype.remove = function(obj){
   return this;
 }
 
+ANGLES = {
+  down: (3 * Math.PI) / 2,
+  up: Math.PI / 2,
+}
+
 function getRandom(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -25,10 +30,9 @@ function speedToVelocity(speed, angle){
   if (speed == 0){
     return {vx: 0, vy: 0};
   }
-  return {
-    vx: Math.sin(angle) * speed,
-    vy: -1 * (Math.cos(angle) * speed),
-  }
+  var vy = -1 * (Math.sin(angle) * speed);
+  var vx = (Math.cos(angle) * speed);
+  return { vx: vx, vy:vy };
 }
 
 function distance(from, to) {
@@ -36,6 +40,13 @@ function distance(from, to) {
     var dy = from.y - to.y;
     var dist = Math.sqrt(dx*dx + dy*dy); 
   return dist;
+}
+
+function targetToVelocity(from, to, speed) {
+  var deltaX = to.x - from.x;
+  var deltaY = ((to.y * -1) - (from.y * -1)); // Invert Y because the canvas Y axis is inverted
+  var angle = Math.atan2(deltaY, deltaX);
+  return speedToVelocity(speed, angle);
 }
 
 function Engine(options){
@@ -425,48 +436,48 @@ PLAYER_WEAPON.patterns = {
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
-    {i: i, position: PLAYER_WEAPON.position.left, angle: -0.2},
-    {i: i, position: PLAYER_WEAPON.position.right, angle: 0.2},
+    {i: i, position: PLAYER_WEAPON.position.left, angle: ANGLES.up - 0.4},
+    {i: i, position: PLAYER_WEAPON.position.right, angle: ANGLES.up + 0.4},
   ]},
   fiveShot: [
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle: -0.2},
-    {position: PLAYER_WEAPON.position.right, angle: 0.2},
+    {position: PLAYER_WEAPON.position.left, angle: ANGLES.up - 0.4},
+    {position: PLAYER_WEAPON.position.right, angle: ANGLES.up + 0.4},
   ],
   sevenShot:[
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle: -0.2},
-    {position: PLAYER_WEAPON.position.right, angle: 0.2},
-    {position: PLAYER_WEAPON.position.left, angle: -0.4},
-    {position: PLAYER_WEAPON.position.right, angle: 0.4},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.4},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.4},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.6},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.6},
   ],
   nineShot: [
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle: -0.2},
-    {position: PLAYER_WEAPON.position.right, angle: 0.2},
-    {position: PLAYER_WEAPON.position.left, angle: -0.4},
-    {position: PLAYER_WEAPON.position.right, angle: 0.4},
-    {position: PLAYER_WEAPON.position.left, angle: -0.6},
-    {position: PLAYER_WEAPON.position.right, angle: 0.6},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.4},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.4},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.6},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.6},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.8},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.8},
   ],
   elevenShot: [
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle: -0.2},
-    {position: PLAYER_WEAPON.position.right, angle: 0.2},
-    {position: PLAYER_WEAPON.position.left, angle: -0.4},
-    {position: PLAYER_WEAPON.position.right, angle: 0.4},
-    {position: PLAYER_WEAPON.position.left, angle: -0.6},
-    {position: PLAYER_WEAPON.position.right, angle: 0.6},
-    {position: PLAYER_WEAPON.position.left, angle: -0.8},
-    {position: PLAYER_WEAPON.position.right, angle: 0.8},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.4},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.4},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.6},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.6},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.8},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.8},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 1},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 1},
   ],
 }
 PLAYER_WEAPON.fire = function(player, weapon){
@@ -577,7 +588,6 @@ function Booster(game, opts){
 
 function makeRandomBooster(game, percentChance, x, y){
   var random = getRandomInt(0, 100);
-  console.log('Dropping booster?', percentChance, random);
   if (!(random < percentChance)){
     return false; 
   }
@@ -627,26 +637,45 @@ function Enemy(game, level, opts){
     }
     bullet.remove();
   }
-  enemy.emitBullet = function(){
-    var vy = enemy.bulletSpeed;
-    var vx;
+  enemy.fire = function(){
+    var directions = [];
+    var startLoc = {x: enemy.x, y: enemy.y};
     switch (enemy.bulletType){
       case 'random':
-        vx = getRandom(-8,8);
+        var velocity = speedToVelocity(enemy.bulletSpeed, getRandom(ANGLES.down - .7, ANGLES.down + .7));
+        directions.push(velocity)
+        break;
+      case 'targeted':
+        var velocity = targetToVelocity(enemy, enemy.game.player, enemy.bulletSpeed);
+        directions.push(velocity)
+        break;
+      case 'blast':
+        startLoc.y += enemy.collisionRadius();
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down - 1.2));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down + 1.2));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down - .9));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down + .9));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down - .6));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down + .6));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down - .3));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down + .3));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down));
         break;
       case 'straight':
       default:
-        vx = 0;
+        directions.push({vy: enemy.bulletSpeed, vx: 0})
     }
-    Bullet(enemy.game, {
-      x: enemy.x,
-      y: enemy.y,
-      vx: vx,
-      vy: enemy.bulletSpeed,
-      enemy: true,
-      color: 0xe74c3c,
-      size: 2
-    })
+    for (const dir of directions) {
+      Bullet(enemy.game, {
+        x: startLoc.x,
+        y: startLoc.y,
+        vx: dir.vx,
+        vy: dir.vy,
+        enemy: true,
+        color: 0xe74c3c,
+        size: 2
+      })
+    }
   }
   enemy.getGraphic = function(spriteSource){
     var graphic = new PIXI.Sprite(PIXI.loader.resources[spriteSource].texture);
@@ -662,7 +691,7 @@ function Enemy(game, level, opts){
   enemy.logic = function(state){
     if (!enemy.lastEmit ||state.currentStateTime - enemy.lastEmit > enemy.cooldown){
       enemy.lastEmit = state.currentStateTime;
-      enemy.emitBullet();
+      enemy.fire();
     }
   }
 
@@ -678,8 +707,7 @@ ENEMIES = {
       x: x,
       y: y,
       spriteSource: game.spriteSources.enemy1,
-      bulletSpeed: 15,
-      cooldown: 1000
+      bulletType: 'straight',
     });
   },
   'randomizer': function(game, level, x, y) {
@@ -689,19 +717,31 @@ ENEMIES = {
       y: y,
       spriteSource: game.spriteSources.enemy2,
       bulletType: 'random',
-      bulletSpeed: 15,
-      cooldown: 1000
+    });
+  },
+  'targeter': function(game, level, x, y) {
+    Enemy(game, level, {
+      level: level,
+      x: x,
+      y: y,
+      spriteSource: game.spriteSources.enemy3,
+      bulletType: 'targeted',
     });
   },
   'boss': function(game, level, x, y) {
+    var bulletType = 'straight';
+    if (level > 10) {
+      bulletType = 'blast';
+    }
     Enemy(game, level, {
       level: level,
       x: x,
       y: y,
       size: 50,
-      health: level * 5,
+      health: (level * 10) - 2,
       spriteSource: game.spriteSources.enemy4,
       boosterDropChance: 100,
+      bulletType: bulletType,
     });
   },
 }
@@ -741,103 +781,6 @@ function Explosion(game, opts){
   explosion.game.animations.push(explosion);
   return explosion;
 }
-
-TEST_LEVEL = function(game){
-  Enemy(game, {health: 5, x: 100, y: 100, size: 100, spriteSource: game.spriteSources.enemy, bulletSpeed: 15, cooldown: 1000});
-  Booster(game, {type: 'shield', x:game.width / 2, y:500, size: 30});
-  Booster(game, {type: 'shield', x:game.width / 2, y:400, size: 30});
-  Booster(game, {type: 'attack', x:game.width / 2, y:300, size: 30});
-  Booster(game, {type: 'attack', x:game.width / 2, y:200, size: 30});
-}
-
-LEVELS = [
-  //TEST_LEVEL,
-  function(game){
-    Enemy(game, {x: 200, y: 100, size: 100, spriteSource: game.spriteSources.enemy1, bulletSpeed: 15, cooldown: 1000});
-    Enemy(game, {x: 400, y: 100, size: 100, spriteSource: game.spriteSources.enemy2, bulletSpeed: 15, cooldown: 1000});
-    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy3, bulletSpeed: 15, cooldown: 1000});
-    Enemy(game, {x: 600, y: 100, size: 100, spriteSource: game.spriteSources.enemy4, bulletSpeed: 15, cooldown: 1000});
-  },
-  function(game){
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random', bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletSpeed: 30, cooldown: 1000});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-  },
-  function(game){
-    Enemy(game, {x: 100, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 200, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 300, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 400, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 500, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 600, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 700, y: 100, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 50, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 150, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 250, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 350, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 450, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 550, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-    Enemy(game, {x: 650, y: 200, size: 10, spriteSource: game.spriteSources.enemy, bulletType: 'random'});
-  },
-];
 
 function Game(options){
   var game = {};
@@ -1018,8 +961,11 @@ function Game(options){
 
     // Determine type of enemies
     var enemies = [ENEMIES.basic]; 
-    if (game.level > 5) {
+    if (game.level > 4) {
       enemies.push(ENEMIES.randomizer);
+    }
+    if (game.level > 15) {
+      enemies.push(ENEMIES.targeter);
     }
 
     ///////////////////////////////////////
