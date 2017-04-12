@@ -42,19 +42,16 @@ function Engine(options){
   var engine = this;
 
   engine.loadSprites = function(){
-    console.log('Loading Sprites')
     engine.sprites = {};
     var spriteList = [];
     for (var spriteKey of Object.keys(options.spriteSources)){
       spriteList.push(options.spriteSources[spriteKey])  ;
     }
     PIXI.loader.add(spriteList).load(function(){
-      console.log('Sprites Loaded')
       for (var spriteKey of Object.keys(options.spriteSources)){
         var source = options.spriteSources[spriteKey];
         engine.sprites[spriteKey] = new PIXI.Sprite(PIXI.loader.resources[source].texture);
       }
-      console.log('Loaded Sprites:', engine.sprites);
       options.onLoad();
     });
   };
@@ -579,7 +576,9 @@ function Booster(game, opts){
 }
 
 function makeRandomBooster(game, percentChance, x, y){
-  if (!(getRandom(0, 100) < percentChance)){
+  var random = getRandomInt(0, 100);
+  console.log('Dropping booster?', percentChance, random);
+  if (!(random < percentChance)){
     return false; 
   }
   boosterOpts = {x:x, y:y, size: 30, vy: 10};
@@ -594,7 +593,7 @@ function makeRandomBooster(game, percentChance, x, y){
   return Booster(game, boosterOpts);
 }
 
-function Enemy(game, opts){
+function Enemy(game, level, opts){
   var enemy = {};
 
   enemy.x = opts.x;
@@ -602,23 +601,22 @@ function Enemy(game, opts){
   enemy.size = opts.size;
   enemy.vx = opts.vx;
   enemy.vy = opts.vy;
-  enemy.health = opts.health || 1;
+  enemy.health = opts.health || Math.floor(level / 2);
   enemy.game = game;
-  enemy.size = 30;
-  enemy.cooldown = opts.cooldown || 500;
-  enemy.bulletSpeed = opts.bulletSpeed || 30;
+  enemy.size = opts.size || 30;
+  enemy.cooldown = opts.cooldown || Math.max(500, 1500 - (level * 50));
+  enemy.bulletSpeed = opts.bulletSpeed || Math.min(30, 15 + (level / 2));
   enemy.bulletType = opts.bulletType || 'straight';
+  enemy.boosterDropChance = opts.boosterDropChance || 20;
 
   enemy.die = function(){
     game.enemies.remove(enemy);
     game.engine.stage.removeChild(enemy.graphic);
-    makeRandomBooster(game, 40, enemy.x, enemy.y);
+    makeRandomBooster(game, enemy.boosterDropChance, enemy.x, enemy.y);
   }
-
   enemy.collisionRadius = function(){
     return enemy.size / 2;
   }
-
   enemy.collide = function(bullet){
     enemy.health -= bullet.damage;
     if (enemy.health <= 0){
@@ -629,7 +627,6 @@ function Enemy(game, opts){
     }
     bullet.remove();
   }
-
   enemy.emitBullet = function(){
     var vy = enemy.bulletSpeed;
     var vx;
@@ -676,24 +673,35 @@ function Enemy(game, opts){
 
 ENEMIES = {
   'basic': function(game, level, x, y) {
-    Enemy(game, {
+    Enemy(game, level, {
+      level: level,
       x: x,
       y: y,
-      size: 100,
       spriteSource: game.spriteSources.enemy1,
       bulletSpeed: 15,
       cooldown: 1000
     });
   },
   'randomizer': function(game, level, x, y) {
-    Enemy(game, {
+    Enemy(game, level, {
+      level: level,
       x: x,
       y: y,
-      size: 100,
       spriteSource: game.spriteSources.enemy2,
       bulletType: 'random',
-      bulletSpeed: 30,
+      bulletSpeed: 15,
       cooldown: 1000
+    });
+  },
+  'boss': function(game, level, x, y) {
+    Enemy(game, level, {
+      level: level,
+      x: x,
+      y: y,
+      size: 50,
+      health: level * 5,
+      spriteSource: game.spriteSources.enemy4,
+      boosterDropChance: 100,
     });
   },
 }
@@ -831,8 +839,6 @@ LEVELS = [
   },
 ];
 
-
-
 function Game(options){
   var game = {};
   game.height = window.innerHeight - 100;
@@ -868,15 +874,11 @@ function Game(options){
     game.loading = true;
     game.resetBullets();
     game.player.speedBoost(2, loadTime);
+
     setTimeout(function(){
-      
       // Run the level constructor
       game.level += 1;
-      if (game.level < LEVELS.length){
-        game.spawnEnemies();
-      } else{
-        game.end(true);
-      }
+      game.spawnEnemies();
       game.loading = false;
     }, loadTime);
   }
@@ -952,8 +954,9 @@ function Game(options){
   }
 
   game.getEnemyPositions = function(rowCount, enemyDistance, viewportPadding) {
-    var halfWidth = game.width / 2;
+    var halfWidth = (game.width / 2) - viewportPadding;
     var startY = viewportPadding;
+    var centerX = game.width / 2;
 
     var positions = [];
     for ( var row=0; row<rowCount; row++ ) {
@@ -961,13 +964,13 @@ function Game(options){
 
       if (row % 2 === 0) {
         // enemy in middle
-        positions.push({x: halfWidth, y: y});
+        positions.push({x: centerX, y: y});
         
         var wingmenCount = Math.floor(halfWidth / enemyDistance);
         for ( var i=1; i<=wingmenCount; i++ ) {
           var distanceFromCenter = enemyDistance * i;
-          var leftWingmanX = halfWidth - distanceFromCenter;
-          var rightWingmanX =  halfWidth + distanceFromCenter;
+          var leftWingmanX = centerX - distanceFromCenter;
+          var rightWingmanX =  centerX + distanceFromCenter;
           positions.push({x: leftWingmanX, y: y});
           positions.push({x: rightWingmanX, y: y});
         }
@@ -977,8 +980,8 @@ function Game(options){
         var sideCount = Math.floor((halfWidth - centerPadding) / enemyDistance);
         for ( var i=0; i<=sideCount; i++ ) {
           var distanceFromCenter = enemyDistance * i;
-          var leftEnemyX = (halfWidth - centerPadding) - distanceFromCenter;
-          var rightEnemyX = (halfWidth + centerPadding) + distanceFromCenter;
+          var leftEnemyX = (centerX - centerPadding) - distanceFromCenter;
+          var rightEnemyX = (centerX + centerPadding) + distanceFromCenter;
           positions.push({x: leftEnemyX, y: y});
           positions.push({x: rightEnemyX, y: y});
         }
@@ -988,13 +991,49 @@ function Game(options){
   }
 
   game.spawnEnemies = function() {
-    var rowCount = 2;
-    var enemyPadding = 200;
     var viewportPadding = 50;
-    var positions = game.getEnemyPositions(rowCount, enemyPadding, viewportPadding);
-    var enemies = [ENEMIES.basic, ENEMIES.randomizer]; 
 
-    for (var position of positions) {
+    // Determine enemy density/count 
+    var rowCount;
+    var enemyPadding;
+    if (game.level <= 5) {
+      rowCount = 1;
+      enemyPadding = 200;
+    } else if (game.level <= 10) {
+      rowCount = 2;
+      enemyPadding = 200;
+    } else if (game.level <= 15) {
+      rowCount = 2;
+      enemyPadding = 150;
+    } else if (game.level <= 20) {
+      rowCount = 3;
+      enemyPadding = 100;
+    } else if (game.level <= 25) {
+      rowCount = 4;
+      enemyPadding = 100;
+    } else {
+      rowCount = 4;
+      enemyPadding = 75;
+    }
+
+    // Determine type of enemies
+    var enemies = [ENEMIES.basic]; 
+    if (game.level > 5) {
+      enemies.push(ENEMIES.randomizer);
+    }
+
+    ///////////////////////////////////////
+    // Place Enemies
+    var positions = game.getEnemyPositions(rowCount, enemyPadding, viewportPadding);
+    var firstSpot = positions[0];
+    var others = positions.slice(1);
+
+    // Place first enemy
+    var bossType = ENEMIES.boss;
+    var boss = bossType(game, game.level, firstSpot.x, firstSpot.y);
+    
+    // Place all others
+    for (var position of others) {
       var enemyType = randomChoice(enemies);
       var enemy = enemyType(game, game.level, position.x, position.y);
     }
