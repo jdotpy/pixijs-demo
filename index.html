@@ -87,6 +87,7 @@
 		}
 		document.startGame = function(options){
 			document.game = Game({
+        players: options.players,
 				onLose: document.onLose,
 				onWin: document.onWin,
 			});
@@ -104,10 +105,10 @@
 			}
 
 			function updateHUD(){
-				hud.lives.innerText = document.game.player.lives;
+				hud.lives.innerText = document.game.players[0].lives;
 				hud.level.innerText = (document.game.level || 0) + 1;
-				hud.weaponLevel.innerText = document.game.player.weaponLevel + 1;
-				hud.shieldPower.innerText = Math.ceil(document.game.player.shield.life / 1000);
+				hud.weaponLevel.innerText = document.game.players[0].weaponLevel + 1;
+				hud.shieldPower.innerText = Math.ceil(document.game.players[0].shield.life / 1000);
 			}
 			setInterval(updateHUD, 500);
 		}
