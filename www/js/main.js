@@ -37,9 +37,20 @@ function speedToVelocity(speed, angle){
 
 function distance(from, to) {
   var dx = from.x - to.x;
-    var dy = from.y - to.y;
-    var dist = Math.sqrt(dx*dx + dy*dy); 
+  var dy = from.y - to.y;
+  var dist = Math.sqrt(dx*dx + dy*dy); 
   return dist;
+}
+
+function normalizeAxisValue(value, controls) {
+  value = Math.abs(value);
+  if (value <= controls.AXIS_MIN_THRESHOLD) {
+    return 0;
+  }
+  if (value >= controls.AXIS_MAX_THRESHOLD) {
+    return 1;
+  }
+  return value;
 }
 
 function targetToVelocity(from, to, speed) {
@@ -47,6 +58,72 @@ function targetToVelocity(from, to, speed) {
   var deltaY = ((to.y * -1) - (from.y * -1)); // Invert Y because the canvas Y axis is inverted
   var angle = Math.atan2(deltaY, deltaX);
   return speedToVelocity(speed, angle);
+}
+
+const GAMEPAD_KEYS = {
+  'Pro Controller (Vendor: 057e Product: 2009)': { // Nintendo Switch Pro Controller
+    FIRE_BUTTON: 6, 
+    SHIELD_BUTTON: 1, 
+    VERTICAL_AXIS: 1,
+    VERTICAL_AXIS_FLIPPED: true,
+    HORIZONTAL_AXIS: 0,
+    HORIZONTAL_AXIS_FLIPPED: false,
+    AXIS_MAX_THRESHOLD: 0.5,
+    AXIS_MIN_THRESHOLD: 0.1,
+  },
+  'default': {
+    FIRE_BUTTON: 0, 
+    SHIELD_BUTTON: 1, 
+    VERTICAL_AXIS: 1,
+    VERTICAL_AXIS_FLIPPED: false,
+    HORIZONTAL_AXIS: 0,
+    HORIZONTAL_AXIS_FLIPPED: false,
+    AXIS_MAX_THRESHOLD: 0.5,
+    AXIS_MIN_THRESHOLD: 0.1,
+  },
+};
+
+function scanGamepads(game) {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : null;
+  if (!gamepads) {
+    return false;
+  }
+
+  let gamepadIndex = 0;
+  for (const gamepad of gamepads) {
+    if (!gamepad) {
+      break;
+    }
+    const player = game.players[gamepadIndex];
+    if (!player) {
+      // We may have more gamepads connected than are people playing
+      break;
+    }
+    const controls = GAMEPAD_KEYS[gamepad.id] || GAMEPAD_KEYS.default;
+
+    // Up/Down
+    let verticalAxisValue = gamepad.axes[controls.VERTICAL_AXIS];
+    if (controls.VERTICAL_AXIS_FLIPPED) {
+      verticalAxisValue = verticalAxisValue * -1;  
+    }
+
+    let horizontalAxisValue = gamepad.axes[controls.HORIZONTAL_AXIS];
+    if (controls.HORIZONTAL_AXIS_FLIPPED) {
+      horizontalAxisValue = horizontalAxisValue * -1;  
+    }
+
+    player.keys.up = verticalAxisValue >= 0 ? normalizeAxisValue(verticalAxisValue, controls) : 0;
+    player.keys.down = verticalAxisValue < 0 ? normalizeAxisValue(verticalAxisValue, controls) : 0;
+    player.keys.right = horizontalAxisValue >= 0 ? normalizeAxisValue(horizontalAxisValue, controls) : 0;
+    player.keys.left = horizontalAxisValue < 0 ? normalizeAxisValue(horizontalAxisValue, controls) : 0;
+
+    player.keys.fire = gamepad.buttons[controls.FIRE_BUTTON].pressed;
+    player.keys.shield = gamepad.buttons[controls.SHIELD_BUTTON].pressed;
+
+    console.log(gamepad.buttons.map(b => b.pressed));
+
+    gamepadIndex += 1;
+  }
 }
 
 function Engine(options){
@@ -137,6 +214,13 @@ function PlayerShield(game, player, options){
     }
   }
   shield.logic = function(stateInfo){
+    if (player.keys.shield && !shield.active) {
+      shield.activate();
+    }
+    if (!player.keys.shield && shield.active) {
+      shield.deactivate();
+    }
+
     shield.arcAngle = (shield.arcAngle + (stateInfo.elapsed / 120)) % (2 * Math.PI);
     if (shield.active){
       var elapsed = stateInfo.currentStateTime - shield.lastLifeCheck;
@@ -190,6 +274,7 @@ function PlayerShield(game, player, options){
 
 function Player(game, options){
   var player = {};
+  player.id = options.id,
   player.alive = true;
   player.lives = options.lives || 3;
   player.x = options.x || 0;
@@ -211,6 +296,11 @@ function Player(game, options){
     left: false,
     fire: false,
   };
+  player.setKey = function(key, value){
+    return function(){
+      player.keys[key] = value;
+    }
+  }
   player.getGraphic = function(sprite){
     var graphic = sprite;
     graphic.width = player.size;
@@ -326,28 +416,26 @@ function Player(game, options){
       Explosion(player.game, {x: player.x, y: player.y, size: 3 * player.size, life: 300});
     }
   }
-  player.updateFromUser = function(key){
-     if (key == 'up' || key == 'down' || key == 'right' || key == 'left'){
-       player.updateVelocity();
-     }
+  player.hasLife = function(){
+    return player.alive || player.lives;
   }
   player.updateVelocity = function(){
     var keys = player.keys;
     var vx = 0;
     var vy = 0;
     if (keys.left){
-      vx -= 1;
+      vx -= parseFloat(keys.left) || 1;
     }
     if (keys.right){
-      vx += 1;
+      vx += parseFloat(keys.right) || 1;
     }
     if (keys.up){
-      vy -= 1;
+      vy -= parseFloat(keys.up) || 1;
     }
     if (keys.down){
-      vy += 1;
+      vy += parseFloat(keys.down) || 1;
     }
-    if (vx != 0 && vy != 0){
+    if (Math.abs(vx) + Math.abs(vy) === 2) {
       vx = Math.sqrt(.5) * vx;
       vy = Math.sqrt(.5) * vy;
     }
@@ -358,6 +446,7 @@ function Player(game, options){
     if (player.alive){
       // Move
       player.game.move(player, stateInfo, true);
+      player.updateVelocity();
 
       // Fire
       if (player.keys.fire && !player.game.loading && stateInfo.currentStateTime - player.lastFire > player.weapon.cooldown){
@@ -618,6 +707,7 @@ function Enemy(game, level, opts){
   enemy.bulletSpeed = opts.bulletSpeed || Math.min(30, 15 + (level / 2));
   enemy.bulletType = opts.bulletType || 'straight';
   enemy.boosterDropChance = opts.boosterDropChance || 20;
+  enemy.target = randomChoice(game.players);
 
   enemy.die = function(){
     game.enemies.remove(enemy);
@@ -646,8 +736,8 @@ function Enemy(game, level, opts){
         directions.push(velocity)
         break;
       case 'targeted':
-        var velocity = targetToVelocity(enemy, enemy.game.player, enemy.bulletSpeed);
-        directions.push(velocity)
+        var velocity = targetToVelocity(enemy, enemy.target, enemy.bulletSpeed);
+        directions.push(velocity);
         break;
       case 'blast':
         startLoc.y += enemy.collisionRadius();
@@ -788,6 +878,7 @@ function Game(options){
   game.width = window.innerWidth;
   game.onWin = options.onWin || function(){console.log('You win!')};
   game.onLose = options.onLose || function(){console.log('You lose!')};
+  game.numPlayers = options.players || 1;
 
   game.spriteSources = {
     player: 'img/_replace/ship.png',
@@ -816,7 +907,9 @@ function Game(options){
     // Reset locations
     game.loading = true;
     game.resetBullets();
-    game.player.speedBoost(2, loadTime);
+    for (const player of game.players) {
+      player.speedBoost(2, loadTime);
+    }
 
     setTimeout(function(){
       // Run the level constructor
@@ -833,11 +926,16 @@ function Game(options){
     game.animations = [];
     game.boosters = [];
     game.enemies = [];
-    game.player = Player(game, {
-      x: game.width / 2,
-      y: game.height - 100,
-      sprite: game.engine.sprites.player,
-    })
+    game.players = [];
+    // Make players
+    for (let i=0;i<game.numPlayers;i++) {
+      game.players.push(Player(game, {
+        id: i,
+        x: game.width / 2,
+        y: game.height - 100,
+        sprite: game.engine.sprites.player,
+      }))
+    }
     game.level = -1;
     game.nextLevel();
     game.bindKeys();
@@ -846,54 +944,55 @@ function Game(options){
   }
 
   game.bindKeys = function(){
-    function playerKey(key, on){
-      return function(){
-        game.player.keys[key] = on;
-        game.player.updateFromUser(key);
+    for (const player of game.players) {
+      if (player.id === 0) {
+        // Movement - WASD
+        Mousetrap.bind('w', player.setKey('up', true), 'keydown');
+        Mousetrap.bind('w', player.setKey('up', false), 'keyup');  
+        Mousetrap.bind('s', player.setKey('down', true), 'keydown');
+        Mousetrap.bind('s', player.setKey('down', false), 'keyup');
+        Mousetrap.bind('a', player.setKey('left', true), 'keydown');
+        Mousetrap.bind('a', player.setKey('left', false), 'keyup');
+        Mousetrap.bind('d', player.setKey('right', true), 'keydown');
+        Mousetrap.bind('d', player.setKey('right', false), 'keyup');
+
+        Mousetrap.bind('space', player.setKey('fire', true), 'keydown');
+        Mousetrap.bind('space', player.setKey('fire', false), 'keyup');
+        Mousetrap.bind('q', player.setKey('shield', true), 'keydown');
+        Mousetrap.bind('q', player.setKey('shield', false), 'keyup');
+
+        // System
+        Mousetrap.bind('enter', function(){
+          game.lastStateUpdate = null;
+          game.play = !game.play;
+        });
+        Mousetrap.bind('7 7 7', function() {
+          game.players[0].applyWeapon('+1');
+        });
+        Mousetrap.bind('8 8 8', function() {
+          game.players[0].shield.life += 1;
+        });
+        Mousetrap.bind('9 9 9', function() {
+          game.players[0].lives += 1;
+        });
+      }
+      else if (player.id === 1) {
+        // Movement - Arrows
+        Mousetrap.bind('up', player.setKey('up', true), 'keydown');
+        Mousetrap.bind('up', player.setKey('up', false), 'keyup');  
+        Mousetrap.bind('down', player.setKey('down', true), 'keydown');
+        Mousetrap.bind('down', player.setKey('down', false), 'keyup');
+        Mousetrap.bind('left', player.setKey('left', true), 'keydown');
+        Mousetrap.bind('left', player.setKey('left', false), 'keyup');
+        Mousetrap.bind('right', player.setKey('right', true), 'keydown');
+        Mousetrap.bind('right', player.setKey('right', false), 'keyup');
+
+        Mousetrap.bind('.', player.setKey('fire', true), 'keydown');
+        Mousetrap.bind('.', player.setKey('fire', false), 'keyup');
+        Mousetrap.bind(',', player.setKey('shield', true), 'keydown');
+        Mousetrap.bind(',', player.setKey('shield', false), 'keyup');
       }
     }
-    
-    // Movement - Arrows
-    Mousetrap.bind('up', playerKey('up', true), 'keydown');
-    Mousetrap.bind('up', playerKey('up', false), 'keyup');  
-    Mousetrap.bind('down', playerKey('down', true), 'keydown');
-    Mousetrap.bind('down', playerKey('down', false), 'keyup');
-    Mousetrap.bind('left', playerKey('left', true), 'keydown');
-    Mousetrap.bind('left', playerKey('left', false), 'keyup');
-    Mousetrap.bind('right', playerKey('right', true), 'keydown');
-    Mousetrap.bind('right', playerKey('right', false), 'keyup');
-    // Movement - WASD
-    Mousetrap.bind('w', playerKey('up', true), 'keydown');
-    Mousetrap.bind('w', playerKey('up', false), 'keyup');  
-    Mousetrap.bind('s', playerKey('down', true), 'keydown');
-    Mousetrap.bind('s', playerKey('down', false), 'keyup');
-    Mousetrap.bind('a', playerKey('left', true), 'keydown');
-    Mousetrap.bind('a', playerKey('left', false), 'keyup');
-    Mousetrap.bind('d', playerKey('right', true), 'keydown');
-    Mousetrap.bind('d', playerKey('right', false), 'keyup');
-
-    // Actions
-    Mousetrap.bind('space', playerKey('fire', true), 'keydown');
-    Mousetrap.bind('space', playerKey('fire', false), 'keyup');
-    Mousetrap.bind('q', game.player.shield.activate, 'keydown');
-    Mousetrap.bind('q', game.player.shield.deactivate, 'keyup');
-
-    // System
-    Mousetrap.bind('enter', function(){
-      game.lastStateUpdate = null;
-      game.play = !game.play;
-    });
-
-    // Cheat
-    Mousetrap.bind('7 7 7', function() {
-      game.player.applyWeapon('+1');
-    });
-    Mousetrap.bind('8 8 8', function() {
-      game.player.shield.life += 1;
-    });
-    Mousetrap.bind('9 9 9', function() {
-      game.player.lives += 1;
-    });
   }
 
   game.getEnemyPositions = function(rowCount, enemyDistance, viewportPadding) {
@@ -1037,7 +1136,10 @@ function Game(options){
     var stateInfo = {lastStateTime: lastTime,currentStateTime: currentTime, elapsed: elapsed}
 
     // Movement and player logic
-    game.player.logic(stateInfo);
+    scanGamepads(game);
+    for (const player of game.players) {
+      player.logic(stateInfo);
+    }
     for (var enemy of game.enemies){
       enemy.logic(stateInfo);
     }
@@ -1046,8 +1148,10 @@ function Game(options){
       bullet.logic(stateInfo);
       // Collision
       if (bullet.enemy){
-        if (distance(bullet, game.player) < game.player.collisionRadius() + bullet.collisionRadius()){
-          game.player.collide(bullet);
+        for (const player of game.players) {
+          if (distance(bullet, player) < player.collisionRadius() + bullet.collisionRadius()){
+            player.collide(bullet);
+          }
         }
       } else {
         for (var enemy of game.enemies){
@@ -1063,16 +1167,17 @@ function Game(options){
     }
     game.removeBullets = [];
 
+    // Booster pick-up
     for (var booster of game.boosters){
       // Movement
       booster.logic(stateInfo);
 
       // Collision
-      if (distance(booster, game.player) < game.player.collisionRadius() + booster.collisionRadius()){
-        booster.boost(game.player);
+      for (const player of game.players) {
+        if (distance(booster, player) < player.collisionRadius() + booster.collisionRadius()){
+          booster.boost(player);
+        }
       }
-    }
-    for (var bullet of game.bullets){
     }
 
     // Animations
@@ -1085,7 +1190,7 @@ function Game(options){
       game.nextLevel();
       game.loading = true;
     }
-    if (!game.player.alive && !game.player.lives){
+    if (game.players.length && !game.players.some((p) => p.hasLife())){
       game.end(false);
     }
     game.lastStateUpdate = currentTime;

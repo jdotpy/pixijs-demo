@@ -31,7 +31,8 @@
 
 			<br>
 			<div class="center">
-				<button onclick="document.startGame()" id="start" class="btn btn-default">Start the Game</button>
+        <button onclick="document.startGame({ players: 1 })" id="start_1player" class="btn btn-default">1 Player</button>
+        <button onclick="document.startGame({ players: 2 })" id="start_2player" class="btn btn-default">2 Player</button>
 			</div>
 		</div>
 	</div>
@@ -84,13 +85,15 @@
 			document.getElementById('youLose').style.display = 'block';
 			console.log('You lose!');
 		}
-		document.startGame = function(){
+		document.startGame = function(options){
 			document.game = Game({
+        players: options.players,
 				onLose: document.onLose,
 				onWin: document.onWin,
 			});
 			document.game.start();
-			document.getElementById('start').blur();
+			document.getElementById('start_1player').blur();
+			document.getElementById('start_2player').blur();
 			var overlay = document.getElementById('instructionOverlay')
 			overlay.parentNode.removeChild(overlay);
 
@@ -102,10 +105,10 @@
 			}
 
 			function updateHUD(){
-				hud.lives.innerText = document.game.player.lives;
+				hud.lives.innerText = document.game.players[0].lives;
 				hud.level.innerText = (document.game.level || 0) + 1;
-				hud.weaponLevel.innerText = document.game.player.weaponLevel + 1;
-				hud.shieldPower.innerText = Math.ceil(document.game.player.shield.life / 1000);
+				hud.weaponLevel.innerText = document.game.players[0].weaponLevel + 1;
+				hud.shieldPower.innerText = Math.ceil(document.game.players[0].shield.life / 1000);
 			}
 			setInterval(updateHUD, 500);
 		}
