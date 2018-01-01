@@ -32,7 +32,9 @@
 			<br>
 			<div class="center">
         <button onclick="document.startGame({ players: 1 })" id="start_1player" class="btn btn-default">1 Player</button>
-        <button onclick="document.startGame({ players: 2 })" id="start_2player" class="btn btn-default">2 Player</button>
+        <button onclick="document.startGame({ players: 2 })" id="start_2player" class="btn btn-default">2 Players</button>
+        <button onclick="document.startGame({ players: 3 })" id="start_3player" class="btn btn-default">3 Players</button>
+        <button onclick="document.startGame({ players: 4 })" id="start_4player" class="btn btn-default">4 Players</button>
 			</div>
 		</div>
 	</div>
@@ -94,6 +96,8 @@
 			document.game.start();
 			document.getElementById('start_1player').blur();
 			document.getElementById('start_2player').blur();
+			document.getElementById('start_3player').blur();
+			document.getElementById('start_4player').blur();
 			var overlay = document.getElementById('instructionOverlay')
 			overlay.parentNode.removeChild(overlay);
 

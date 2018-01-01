@@ -71,6 +71,16 @@ const GAMEPAD_KEYS = {
     AXIS_MAX_THRESHOLD: 0.5,
     AXIS_MIN_THRESHOLD: 0.1,
   },
+  'Joy-Con (R) (Vendor: 057e Product: 2007)': {
+    FIRE_BUTTON: 6, 
+    SHIELD_BUTTON: 1, 
+    VERTICAL_AXIS: 1,
+    VERTICAL_AXIS_FLIPPED: true,
+    HORIZONTAL_AXIS: 0,
+    HORIZONTAL_AXIS_FLIPPED: false,
+    AXIS_MAX_THRESHOLD: 0.5,
+    AXIS_MIN_THRESHOLD: 0.1,
+  },
   'default': {
     FIRE_BUTTON: 0, 
     SHIELD_BUTTON: 1, 
@@ -119,8 +129,6 @@ function scanGamepads(game) {
 
     player.keys.fire = gamepad.buttons[controls.FIRE_BUTTON].pressed;
     player.keys.shield = gamepad.buttons[controls.SHIELD_BUTTON].pressed;
-
-    console.log(gamepad.buttons.map(b => b.pressed));
 
     gamepadIndex += 1;
   }
@@ -180,7 +188,6 @@ function Engine(options){
       Math.sin(start) * radius
     )
   }
-
 
   engine.setup();
   return engine;
@@ -301,8 +308,8 @@ function Player(game, options){
       player.keys[key] = value;
     }
   }
-  player.getGraphic = function(sprite){
-    var graphic = sprite;
+  player.getGraphic = function(spriteSource){
+    var graphic = new PIXI.Sprite(PIXI.loader.resources[spriteSource].texture);
     graphic.width = player.size;
     graphic.height = player.size;
     graphic.anchor.x = 0.5;
@@ -458,7 +465,7 @@ function Player(game, options){
     player.shield.logic(stateInfo);
   }
 
-  player.graphic = player.getGraphic(options.sprite);
+  player.graphic = player.getGraphic(options.spriteSource);
   player.game = game;
   player.applyWeapon();
 
@@ -931,6 +938,7 @@ function Game(options){
     for (let i=0;i<game.numPlayers;i++) {
       game.players.push(Player(game, {
         id: i,
+        spriteSource: game.spriteSources.player,
         x: game.width / 2,
         y: game.height - 100,
         sprite: game.engine.sprites.player,
