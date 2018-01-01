@@ -1,1 +1,1 @@
-zip -r game.zip www
+zip -r dist/game.zip www
