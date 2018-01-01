@@ -738,7 +738,7 @@ ENEMIES = {
       x: x,
       y: y,
       size: 50,
-      health: (level * 10) - 2,
+      health: (level + 1) * 10 - 8,
       spriteSource: game.spriteSources.enemy4,
       boosterDropChance: 100,
       bulletType: bulletType,
