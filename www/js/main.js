@@ -62,18 +62,9 @@ function targetToVelocity(from, to, speed) {
 
 const GAMEPAD_KEYS = {
   'Pro Controller (Vendor: 057e Product: 2009)': { // Nintendo Switch Pro Controller
-    FIRE_BUTTON: 6, 
-    SHIELD_BUTTON: 1, 
-    VERTICAL_AXIS: 1,
-    VERTICAL_AXIS_FLIPPED: true,
-    HORIZONTAL_AXIS: 0,
-    HORIZONTAL_AXIS_FLIPPED: false,
-    AXIS_MAX_THRESHOLD: 0.5,
-    AXIS_MIN_THRESHOLD: 0.1,
-  },
-  'Joy-Con (R) (Vendor: 057e Product: 2007)': {
-    FIRE_BUTTON: 6, 
-    SHIELD_BUTTON: 1, 
+    FIRE_BUTTON: 1, 
+    SHIELD_BUTTON: 7, 
+    HYPERSPEED_BUTTON: 6, 
     VERTICAL_AXIS: 1,
     VERTICAL_AXIS_FLIPPED: true,
     HORIZONTAL_AXIS: 0,
@@ -84,6 +75,7 @@ const GAMEPAD_KEYS = {
   'default': {
     FIRE_BUTTON: 0, 
     SHIELD_BUTTON: 1, 
+    HYPERSPEED_BUTTON: 2, 
     VERTICAL_AXIS: 1,
     VERTICAL_AXIS_FLIPPED: false,
     HORIZONTAL_AXIS: 0,
@@ -127,6 +119,7 @@ function scanGamepads(game) {
     player.keys.right = horizontalAxisValue >= 0 ? normalizeAxisValue(horizontalAxisValue, controls) : 0;
     player.keys.left = horizontalAxisValue < 0 ? normalizeAxisValue(horizontalAxisValue, controls) : 0;
 
+    player.keys.hyperspeed = gamepad.buttons[controls.HYPERSPEED_BUTTON].pressed;
     player.keys.fire = gamepad.buttons[controls.FIRE_BUTTON].pressed;
     player.keys.shield = gamepad.buttons[controls.SHIELD_BUTTON].pressed;
 
@@ -197,7 +190,7 @@ function PlayerShield(game, player, options){
   var shield = {
     game: game,
     player: player,
-    life: 0,
+    life: options.life || 0,
     active: false,
     size: options.size || 50,
     color: 0x0000EE,
@@ -291,17 +284,18 @@ function Player(game, options){
   player.size = options.size || 30;
   player.vx = 0;
   player.vy = 0;
-  player.speed = 25;
+  player.speed = 18;
   player.invulnerable = false;
   player.weaponLevel = 0;
   player.lastFire = (new Date()).getTime();
-  player.shield = PlayerShield(game, player, {size: 50});
+  player.shield = PlayerShield(game, player, {size: 50, life: 10000 });
   player.keys = {
     up: false,
     down: false,
     right: false,
     left: false,
     fire: false,
+    hyperspeed: false,
   };
   player.setKey = function(key, value){
     return function(){
@@ -346,7 +340,7 @@ function Player(game, options){
       fire: PLAYER_WEAPON.fire, // Function that sends the blast
       color: 0x00FF00,
       enemy: false,
-      size: 2,  // Size of bullet it produces
+      size: 2, // Size of bullet it produces
       speed: 30, // Default speed 
       damage: 5, // Default damage
       cooldown: 500, // Default cooldown
@@ -355,7 +349,7 @@ function Player(game, options){
     if (level < 3){
       weapon.pattern = PLAYER_WEAPON.patterns.singleShot;
       weapon.cooldown = 1000;
-      weapon.speed = 20 + (2 * level); // 20 - 24
+      weapon.speed = 25;
       weapon.damage = 1;
     } else if (level < 5){
       weapon.pattern = PLAYER_WEAPON.patterns.tripleShot;
@@ -363,12 +357,12 @@ function Player(game, options){
       weapon.speed = 25;
       weapon.damage = 2;
     } else if (level < 7){
-      weapon.pattern = PLAYER_WEAPON.patterns.partialFiveShot(4);
+      weapon.pattern = PLAYER_WEAPON.patterns.fiveShot;
       weapon.speed = 26
       weapon.cooldown = 700 - ((level - 4) * 50); // 650 - 600
       weapon.damage = 3;
     } else if (level < 10){
-      weapon.pattern = PLAYER_WEAPON.patterns.partialFiveShot(2);
+      weapon.pattern = PLAYER_WEAPON.patterns.fiveShot;
       weapon.speed = 27;
       weapon.cooldown = 600 - ((level - 6) * 50); // 550 - 500
       weapon.damage = 4;
@@ -428,6 +422,10 @@ function Player(game, options){
   }
   player.updateVelocity = function(){
     var keys = player.keys;
+    var speed = player.speed;
+    if (player.keys.hyperspeed) {
+      speed = speed * 2;
+    }
     var vx = 0;
     var vy = 0;
     if (keys.left){
@@ -446,8 +444,8 @@ function Player(game, options){
       vx = Math.sqrt(.5) * vx;
       vy = Math.sqrt(.5) * vy;
     }
-    player.vx = vx * player.speed;
-    player.vy = vy * player.speed;
+    player.vx = vx * speed;
+    player.vy = vy * speed;
   }
   player.logic = function(stateInfo){
     if (player.alive){
@@ -470,7 +468,7 @@ function Player(game, options){
   player.applyWeapon();
 
   // Add sprite 
-  return player
+  return player;
 }
 
 function Bullet(game, opts){
@@ -520,6 +518,8 @@ PLAYER_WEAPON.position = {
   primary: 1,
   left: 2,
   right: 3,
+  leftWing: 4,
+  rightWing: 5
 }
 PLAYER_WEAPON.patterns = {
   singleShot: [{position: PLAYER_WEAPON.position.primary}],
@@ -528,28 +528,21 @@ PLAYER_WEAPON.patterns = {
     {position: PLAYER_WEAPON.position.left},
     {position: PLAYER_WEAPON.position.right},
   ],
-  partialFiveShot: function(i){return [
-    {position: PLAYER_WEAPON.position.primary},
-    {position: PLAYER_WEAPON.position.left},
-    {position: PLAYER_WEAPON.position.right},
-    {i: i, position: PLAYER_WEAPON.position.left, angle: ANGLES.up - 0.4},
-    {i: i, position: PLAYER_WEAPON.position.right, angle: ANGLES.up + 0.4},
-  ]},
   fiveShot: [
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.leftWing},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle: ANGLES.up - 0.4},
-    {position: PLAYER_WEAPON.position.right, angle: ANGLES.up + 0.4},
+    {position: PLAYER_WEAPON.position.rightWing},
   ],
   sevenShot:[
     {position: PLAYER_WEAPON.position.primary},
     {position: PLAYER_WEAPON.position.left},
+    {position: PLAYER_WEAPON.position.leftWing},
     {position: PLAYER_WEAPON.position.right},
-    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.4},
-    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.4},
-    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.6},
-    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.6},
+    {position: PLAYER_WEAPON.position.rightWing},
+    {position: PLAYER_WEAPON.position.left, angle:ANGLES.up - 0.2},
+    {position: PLAYER_WEAPON.position.right, angle:ANGLES.up + 0.2},
   ],
   nineShot: [
     {position: PLAYER_WEAPON.position.primary},
@@ -603,9 +596,15 @@ PLAYER_WEAPON.fire = function(player, weapon){
     if (b.position == PLAYER_WEAPON.position.left){
       opts.x = player.x - 15;
       opts.y = player.y - 10;
+    } else if (b.position == PLAYER_WEAPON.position.leftWing){
+      opts.x = player.x - 10;
+      opts.y = player.y - 6;
     } else if (b.position == PLAYER_WEAPON.position.right){
       opts.x =  player.x + 15;
       opts.y =  player.y - 10;
+    } else if (b.position == PLAYER_WEAPON.position.rightWing){
+      opts.x = player.x + 10;
+      opts.y = player.y - 6;
     } else {
       // Primary
       opts.x = player.x;
@@ -654,7 +653,7 @@ function Booster(game, opts){
       player.lives += 1;
     }
     else if (booster.type == 'shield'){
-      player.shield.life += 1000;
+      player.shield.life += 4000;
     }
     booster.remove();
   }
@@ -704,14 +703,13 @@ function Enemy(game, level, opts){
 
   enemy.x = opts.x;
   enemy.y = opts.y;
-  enemy.size = opts.size;
   enemy.vx = opts.vx;
   enemy.vy = opts.vy;
-  enemy.health = opts.health || Math.floor(level / 2);
+  enemy.health = opts.health || 1 + Math.floor(level / 2);
   enemy.game = game;
   enemy.size = opts.size || 30;
   enemy.cooldown = opts.cooldown || Math.max(500, 1500 - (level * 50));
-  enemy.bulletSpeed = opts.bulletSpeed || Math.min(30, 15 + (level / 2));
+  enemy.bulletSpeed = opts.bulletSpeed || (10 + (level / 4));
   enemy.bulletType = opts.bulletType || 'straight';
   enemy.boosterDropChance = opts.boosterDropChance || 20;
   enemy.target = randomChoice(game.players);
@@ -730,7 +728,8 @@ function Enemy(game, level, opts){
       enemy.die();
       Explosion(enemy.game, {x: enemy.x, y: enemy.y, size: 3 * enemy.size, life: 300, spriteSource: 'img/_replace/explosion.png'});
     } else {
-      Explosion(enemy.game, {x: enemy.x, y: enemy.y, size: 30, life: 300, spriteSource: 'img/_replace/explosion.png'});
+      console.log('damage', bullet, enemy);
+      Explosion(enemy.game, {x: bullet.x, y: bullet.y, size: 30, life: 300, spriteSource: 'img/_replace/explosion.png'});
     }
     bullet.remove();
   }
@@ -738,6 +737,10 @@ function Enemy(game, level, opts){
     var directions = [];
     var startLoc = {x: enemy.x, y: enemy.y};
     switch (enemy.bulletType){
+      case 'angled':
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down - .7));
+        directions.push(speedToVelocity(enemy.bulletSpeed, ANGLES.down + .7));
+        break;
       case 'random':
         var velocity = speedToVelocity(enemy.bulletSpeed, getRandom(ANGLES.down - .7, ANGLES.down + .7));
         directions.push(velocity)
@@ -803,6 +806,7 @@ ENEMIES = {
       level: level,
       x: x,
       y: y,
+      size: 50,
       spriteSource: game.spriteSources.enemy1,
       bulletType: 'straight',
     });
@@ -812,8 +816,19 @@ ENEMIES = {
       level: level,
       x: x,
       y: y,
+      size: 50,
       spriteSource: game.spriteSources.enemy2,
       bulletType: 'random',
+    });
+  },
+  'angler': function(game, level, x, y) {
+    Enemy(game, level, {
+      level: level,
+      x: x,
+      y: y,
+      size: 50,
+      spriteSource: game.spriteSources.enemy2,
+      bulletType: 'angled',
     });
   },
   'targeter': function(game, level, x, y) {
@@ -821,6 +836,7 @@ ENEMIES = {
       level: level,
       x: x,
       y: y,
+      size: 50,
       spriteSource: game.spriteSources.enemy3,
       bulletType: 'targeted',
     });
@@ -942,6 +958,7 @@ function Game(options){
         x: game.width / 2,
         y: game.height - 100,
         sprite: game.engine.sprites.player,
+        lives: 6,
       }))
     }
     game.level = -1;
@@ -954,20 +971,22 @@ function Game(options){
   game.bindKeys = function(){
     for (const player of game.players) {
       if (player.id === 0) {
-        // Movement - WASD
-        Mousetrap.bind('w', player.setKey('up', true), 'keydown');
-        Mousetrap.bind('w', player.setKey('up', false), 'keyup');  
-        Mousetrap.bind('s', player.setKey('down', true), 'keydown');
-        Mousetrap.bind('s', player.setKey('down', false), 'keyup');
-        Mousetrap.bind('a', player.setKey('left', true), 'keydown');
-        Mousetrap.bind('a', player.setKey('left', false), 'keyup');
-        Mousetrap.bind('d', player.setKey('right', true), 'keydown');
-        Mousetrap.bind('d', player.setKey('right', false), 'keyup');
+        // Movement - Arrows
+        Mousetrap.bind('up', player.setKey('up', true), 'keydown');
+        Mousetrap.bind('up', player.setKey('up', false), 'keyup');  
+        Mousetrap.bind('down', player.setKey('down', true), 'keydown');
+        Mousetrap.bind('down', player.setKey('down', false), 'keyup');
+        Mousetrap.bind('left', player.setKey('left', true), 'keydown');
+        Mousetrap.bind('left', player.setKey('left', false), 'keyup');
+        Mousetrap.bind('right', player.setKey('right', true), 'keydown');
+        Mousetrap.bind('right', player.setKey('right', false), 'keyup');
 
-        Mousetrap.bind('space', player.setKey('fire', true), 'keydown');
-        Mousetrap.bind('space', player.setKey('fire', false), 'keyup');
-        Mousetrap.bind('q', player.setKey('shield', true), 'keydown');
-        Mousetrap.bind('q', player.setKey('shield', false), 'keyup');
+        Mousetrap.bind('.', player.setKey('fire', true), 'keydown');
+        Mousetrap.bind('.', player.setKey('fire', false), 'keyup');
+        Mousetrap.bind(',', player.setKey('shield', true), 'keydown');
+        Mousetrap.bind(',', player.setKey('shield', false), 'keyup');
+        Mousetrap.bind('m', player.setKey('hyperspeed', true), 'keydown');
+        Mousetrap.bind('m', player.setKey('hyperspeed', false), 'keyup');
 
         // System
         Mousetrap.bind('enter', function(){
@@ -985,20 +1004,22 @@ function Game(options){
         });
       }
       else if (player.id === 1) {
-        // Movement - Arrows
-        Mousetrap.bind('up', player.setKey('up', true), 'keydown');
-        Mousetrap.bind('up', player.setKey('up', false), 'keyup');  
-        Mousetrap.bind('down', player.setKey('down', true), 'keydown');
-        Mousetrap.bind('down', player.setKey('down', false), 'keyup');
-        Mousetrap.bind('left', player.setKey('left', true), 'keydown');
-        Mousetrap.bind('left', player.setKey('left', false), 'keyup');
-        Mousetrap.bind('right', player.setKey('right', true), 'keydown');
-        Mousetrap.bind('right', player.setKey('right', false), 'keyup');
+        // Movement - WASD
+        Mousetrap.bind('w', player.setKey('up', true), 'keydown');
+        Mousetrap.bind('w', player.setKey('up', false), 'keyup');  
+        Mousetrap.bind('s', player.setKey('down', true), 'keydown');
+        Mousetrap.bind('s', player.setKey('down', false), 'keyup');
+        Mousetrap.bind('a', player.setKey('left', true), 'keydown');
+        Mousetrap.bind('a', player.setKey('left', false), 'keyup');
+        Mousetrap.bind('d', player.setKey('right', true), 'keydown');
+        Mousetrap.bind('d', player.setKey('right', false), 'keyup');
 
-        Mousetrap.bind('.', player.setKey('fire', true), 'keydown');
-        Mousetrap.bind('.', player.setKey('fire', false), 'keyup');
-        Mousetrap.bind(',', player.setKey('shield', true), 'keydown');
-        Mousetrap.bind(',', player.setKey('shield', false), 'keyup');
+        Mousetrap.bind('space', player.setKey('fire', true), 'keydown');
+        Mousetrap.bind('space', player.setKey('fire', false), 'keyup');
+        Mousetrap.bind('q', player.setKey('shield', true), 'keydown');
+        Mousetrap.bind('q', player.setKey('shield', false), 'keyup');
+        Mousetrap.bind('m', player.setKey('hyperspeed', true), 'keydown');
+        Mousetrap.bind('m', player.setKey('hyperspeed', false), 'keyup');
       }
     }
   }
@@ -1050,20 +1071,20 @@ function Game(options){
       rowCount = 1;
       enemyPadding = 200;
     } else if (game.level <= 10) {
-      rowCount = 2;
-      enemyPadding = 200;
+      rowCount = 1;
+      enemyPadding = 150;
     } else if (game.level <= 15) {
+      rowCount = 1;
+      enemyPadding = 100;
+    } else if (game.level <= 20) {
       rowCount = 2;
       enemyPadding = 150;
-    } else if (game.level <= 20) {
-      rowCount = 3;
-      enemyPadding = 100;
     } else if (game.level <= 25) {
-      rowCount = 4;
+      rowCount = 2;
       enemyPadding = 100;
     } else {
-      rowCount = 4;
-      enemyPadding = 75;
+      rowCount = 3;
+      enemyPadding = 150;
     }
 
     // Determine type of enemies
